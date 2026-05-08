@@ -1,20 +1,37 @@
-import { PuppeteerCrawler } from 'crawlee';
+import { PuppeteerCrawler, Dataset } from 'crawlee';
 
 const soloditCrawler = new PuppeteerCrawler({
     async requestHandler({ page, request, log }) {
-        log.info(`Scraping vulnerabilities from ${request.url}`);
+        log.info(`Scraping Solodit: ${request.url}`);
         
-        // Wait for the vulnerability cards to appear in the DOM
-        await page.waitForSelector('.vulnerability-card-selector'); 
+        // 1. Wait for the list on the left to load
+        // (Replace '.list-item-class' with the actual class you found in Step 1)
+        await page.waitForSelector('.list-item-class'); 
 
-        const results = await page.$$eval('.vulnerability-card-selector', (cards) => {
-            return cards.slice(0, 10).map(card => ({
-                title: card.querySelector('h3').innerText,
-                severity: card.querySelector('.severity-tag').innerText,
-                description: card.querySelector('.summary').innerText,
-            }));
-        });
+        // 2. Find all the links to the vulnerabilities in the left column
+        const vulnerabilityLinks = await page.$$eval('.list-item-class a', links => links.map(a => a.href));
 
-        await Dataset.pushData(results);
+        // 3. Visit the first 5 links to get the detailed data from the right side!
+        for (let i = 0; i < 5; i++) {
+            if (!vulnerabilityLinks[i]) break;
+            
+            await page.goto(vulnerabilityLinks[i]);
+            
+            // Wait for the right-side detail pane to load
+            // (Replace '.detail-title-class' with what you found in Step 2)
+            await page.waitForSelector('.detail-title-class');
+
+            // Extract the juicy details
+            const details = await page.evaluate(() => {
+                return {
+                    title: document.querySelector('.detail-title-class')?.innerText || '',
+                    description: document.querySelector('.detail-description-class')?.innerText || '',
+                    codeSnippet: document.querySelector('.solidity-code-block-class')?.innerText || '',
+                    source: window.location.href
+                };
+            });
+
+            await Dataset.pushData(details);
+        }
     },
 });
