@@ -1,4 +1,9 @@
 {
+  "scripts": {
+    "backend3:demo": "tsx agent/src/scripts/backend3Demo.ts",
+    "backend3:demo:live": "tsx agent/src/scripts/backend3Demo.ts --live",
+    "agent:typecheck": "tsc -p agent/tsconfig.json"
+  },
   "dependencies": {
     "cheerio": "^1.2.0",
     "crawlee": "^3.16.0",
@@ -7,6 +12,7 @@
   },
   "devDependencies": {
     "@types/node": "^25.6.2",
+    "tsx": "^4.21.0",
     "typescript": "^6.0.3"
   }
 }

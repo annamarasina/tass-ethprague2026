@@ -34,6 +34,18 @@ Test:
 forge test -vv
 ```
 
+Run the Backend 3 mock demo from the repository root:
+
+```bash
+npm run backend3:demo
+```
+
+Run the live Backend 3 demo after deployment and env setup:
+
+```bash
+npm run backend3:demo:live
+```
+
 Dry-run deployment against Base Sepolia:
 
 ```bash
