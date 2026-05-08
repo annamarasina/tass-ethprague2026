@@ -133,6 +133,9 @@ Acceptance criteria:
 Approval gate:
 - Stop after mock service is ready.
 
+Status:
+- Complete.
+
 ## Phase 4: Live Registry Certification Service
 
 Purpose:
