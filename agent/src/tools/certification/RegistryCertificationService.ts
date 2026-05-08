@@ -14,6 +14,7 @@ import { privateKeyToAccount } from "viem/accounts";
 import { baseSepolia } from "viem/chains";
 import type { AuditLogEvent, AuditResult, CertificateResult, EmitLog, RegistryVerificationResult } from "../../interfaces";
 import { CertificationBlockedError, type CertificationService } from "./CertificationService";
+import { SourcifyVerifier } from "./SourcifyVerifier";
 import { auditRegistryAbi } from "./abi/AuditRegistry";
 
 interface RegistryCertificationServiceOptions {
@@ -54,14 +55,13 @@ export class RegistryCertificationService implements CertificationService {
   }
 
   async verifyRegistry(emit: EmitLog): Promise<RegistryVerificationResult> {
-    emit(this.event("registry-verification", "verify", "warn", "Live Sourcify verification is implemented in Phase 5"));
-
-    return {
-      registryAddress: this.registryAddress,
+    const verifier = new SourcifyVerifier({
+      apiBaseUrl: process.env.SOURCIFY_API_BASE,
       chainId: this.chain.id,
-      sourcifyStatus: "failed",
-      error: "Sourcify verification is not implemented until Phase 5",
-    };
+      registryAddress: this.registryAddress,
+    });
+
+    return verifier.verify(emit);
   }
 
   async issueCertificate(auditResult: AuditResult, emit: EmitLog): Promise<CertificateResult> {

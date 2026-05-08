@@ -57,11 +57,23 @@ After deployment, set the deployed registry address in the root `.env`:
 
 ```bash
 AUDIT_REGISTRY_ADDRESS=0x...
+AUDIT_REGISTRY_CREATION_TX_HASH=0x...
 ```
+
+## Sourcify Verification
+
+The TypeScript certification service verifies the registry through Sourcify API v2:
+
+```text
+POST /v2/verify/{chainId}/{address}
+GET /v2/verify/{verificationId}
+```
+
+For best results, set `AUDIT_REGISTRY_CREATION_TX_HASH` after deployment so Sourcify can resolve the creation bytecode directly.
 
 ## Foundry Verification Fallback
 
-Sourcify verification is implemented in a later Backend Developer 3 phase. If a manual Foundry fallback is needed during the demo, use:
+If a manual Foundry fallback is needed during the demo, use:
 
 ```bash
 forge verify-contract \
@@ -70,4 +82,3 @@ forge verify-contract \
   "$AUDIT_REGISTRY_ADDRESS" \
   src/AuditRegistry.sol:AuditRegistry
 ```
-
