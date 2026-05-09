@@ -1,14 +1,16 @@
 import type { AuditInput, AuditLogEvent, EmitLog, LegalReport } from "../../interfaces";
 import type { LegalAnalyzer } from "./LegalAnalyzer";
+import { summarizeCodeIntent } from "./codeIntentSummarizer";
 
 export class MockLegalAnalyzer implements LegalAnalyzer {
   async run(input: AuditInput, emit: EmitLog): Promise<LegalReport> {
     emit(event(input.auditId, "legal_analysis", "info", "Summarizing user contract intent"));
     await delay(250);
 
-    const hasAdmin = /\bonlyOwner\b|\bowner\b|\badmin\b/i.test(input.sourceCode);
-    const claimsNoAdmin = /no\s+admin|no\s+owner|fully\s+decentralized|trustless/i.test(
-      `${input.readmeText ?? ""}\n${input.commentsText ?? ""}\n${input.sourceCode}`,
+    const intent = summarizeCodeIntent(input.sourceCode, input.readmeText, input.commentsText);
+    const hasAdmin = intent.adminSignals.length > 0 || intent.adminFunctions.length > 0;
+    const claimsNoAdmin = intent.declaredClaims.some((claim) =>
+      ["no admin", "no owner", "fully decentralized", "trustless"].includes(claim),
     );
 
     emit(event(input.auditId, "legal_scrape", "info", "Loading mock MiCA and ESMA legal knowledge"));
@@ -40,7 +42,7 @@ export class MockLegalAnalyzer implements LegalAnalyzer {
           summary: "Mock ESMA source used as cached regulatory context for the legal analyzer.",
         },
       ],
-      intentSummary: summarizeIntent(input.sourceCode, hasAdmin),
+      intentSummary: intent.summary,
       codeIntentMismatch: mismatch
         ? [
             {
@@ -62,7 +64,7 @@ export class MockLegalAnalyzer implements LegalAnalyzer {
         },
       ],
       exploitNewsFindings: [],
-      sentimentSummary: "Mock legal sentiment is stable; the primary issue is consistency between stated intent and contract controls.",
+      sentimentSummary: `Mock legal sentiment is stable. Intent classifier labeled this as ${intent.likelyProtocolType}.`,
     };
 
     emit(event(input.auditId, "legal_analysis", "success", "Mock legal analyzer produced LegalReport", {
@@ -73,17 +75,6 @@ export class MockLegalAnalyzer implements LegalAnalyzer {
 
     return report;
   }
-}
-
-function summarizeIntent(sourceCode: string, hasAdmin: boolean): string {
-  const contractNames = [...sourceCode.matchAll(/\bcontract\s+([A-Za-z_][A-Za-z0-9_]*)/g)].map((match) => match[1]);
-  const primaryName = contractNames[0] ?? "Selected contract";
-  const custodyHint = /\bdeposit\b|\bwithdraw\b|\btransfer\b|\bpayable\b/i.test(sourceCode)
-    ? "appears to handle user funds or token movement"
-    : "does not obviously custody user funds";
-  const adminHint = hasAdmin ? "includes owner/admin-style controls" : "does not expose obvious owner/admin keywords";
-
-  return `${primaryName} ${custodyHint} and ${adminHint}.`;
 }
 
 function findFirstLine(sourceCode: string, pattern: RegExp): number | undefined {
@@ -126,4 +117,3 @@ function delay(ms: number): Promise<void> {
     setTimeout(resolve, ms);
   });
 }
-

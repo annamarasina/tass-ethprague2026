@@ -121,7 +121,7 @@ Approval gate:
 - Stop after mock analyzer compiles.
 
 Status:
-- In progress.
+- Complete.
 
 ## Phase 2: User Code Intent Summarizer
 
@@ -154,6 +154,9 @@ Acceptance criteria:
 
 Approval gate:
 - Stop after local summarizer works on demo contracts.
+
+Status:
+- In progress.
 
 ## Phase 3: Legal Knowledge Provider
 
