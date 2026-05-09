@@ -54,7 +54,7 @@ export async function verifiedFetch(swarmHash) {
 
 // --- QUICK DEMO SCRIPT ---
 // If we run this file directly, it will test the fetch on your Brain Hash!
-const YOUR_HASH = "c5fc94651b4563109e083419a007fc5d3b2699ab6c7d0c0bb412c358a59f4e77";
+const YOUR_HASH = "e618525f94c38a64945ae74eca6d4c5dd7483d4cc92add1b2f959aabdd2bc44d";
 verifiedFetch(YOUR_HASH).then(data => {
     console.log(`\n🧠 [Auditor Agent] Brain successfully loaded! Total threat intel records: ${data.length}`);
 });
