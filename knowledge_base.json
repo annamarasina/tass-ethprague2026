@@ -49,5 +49,26 @@
     "description": "Top 5 Bugs from the Fuel Attackathon\nCopy\nCopied\n25 Sep 2024\n•\n8 min read\nTop 5 Bugs from the Fuel Attackathon\nImmunefi\n\nFrom June 17th to July 22, 2024, Fuel protocol ran a month-long Attackathon on the Immunefi platform, welcoming top whitehat talents to find vulnerabilities within Fuel’s Layer 2 infrastructure. With a reward pool of up to $1 million USDC, participants were successful in uncovering interesting bugs with various severities.\n\nThese vulnerabilities are now FIXED, as of publication.\n\nHere are the top five findings, as identified by Immunefi’s triagers, that showcased critical vulnerabilities and enhanced the security of the Fuel Network.\n\n1.Messages to L1 included during reverts allows theft from bridge — Report 32965\n\nSeverity: Critical\n\nImpact: Direct loss of funds\n\nAsset: https://github.com/FuelLabs/fuel-core/tree/v0.31.0\n\nThe function executor/src/executor.rs::update_execution_data adds all message_ids from the MessageOut receipts of the current tx to the execution data even if the tx itself has reverted.\n\nfn update_execution_data<Tx: Chargeable>(\n        &self,\n        tx: &Tx,\n        execution_data: &mut ExecutionData,\n        receipts: Vec<Receipt>,\n        gas_price: Word,\n        reverted: bool,\n        state: ProgramState,\n        tx_id: TxId,\n    ) -> ExecutorResult<()> {\n        let (used_gas, tx_fee) = self.total_fee_paid(tx, &receipts, gas_price)?;\n        execution_data.coinbase = execution_data\n            .coinbase\n            .checked_add(tx_fee)\n            .ok_or(ExecutorError::FeeOverflow)?;\n        execution_data.used_gas = execution_data\n            .used_gas\n            .checked_add(used_gas)\n            .ok_or(ExecutorError::GasOverflow)?;\n        execution_data\n            .message_ids\n            .extend(receipts.iter().filter_map(|r| r.message_id()));\n        let status = if reverted {\n            TransactionExecutionResult::Failed {\n                result: Some(state),\n                receipts,\n                total_gas: used_gas,\n                total_fee: tx_fee,\n            }\n        } else {\n            // else tx was a success\n            TransactionExecutionResult::Success {\n                result: Some(state),\n                receipts,\n                total_gas: used_gas,\n                total_fee: tx_fee,\n            }\n        };\n\nThis means it’s possible to send out messages to the L1 but revert the tx, which un-does the burn of the bridged tokens. This fake withdrawal can be repeated over and over, with the messages still being relayed on the L1, potentially allowing the theft of all tokens from the bridge.\n\nThe exploit steps are as follows:\n\nThe attacker and victim both deposit the same amount of the same token\nThe attacker withdraws 2 times. For the first time, he reverts his transaction at the end, and the second time follows the regular flow. He can relay this twice, which will result in the attacker having double the amount of tokens he originally deposited.\nAs the victim withdraws, the ... [TRUNCATED]",
     "url": "https://immunefi.com/blog/bug-fix-reviews/top-5-bugs-from-the-fuel-attackathon/",
     "scrapedAt": "2026-05-08T20:06:18.909Z"
+  },
+  {
+    "source": "ESMA_WATCHDOG",
+    "type": "Regulatory_Update",
+    "title": "Markets in Crypto-Assets Regulation (MiCA)",
+    "url": "https://www.esma.europa.eu/esmas-activities/digital-finance-and-innovation/markets-crypto-assets-regulation-mica",
+    "scrapedAt": "2026-05-09T08:47:44.052Z"
+  },
+  {
+    "source": "ESMA_WATCHDOG",
+    "type": "Regulatory_Update",
+    "title": "Guidelines, Recommendations and Technical Standards",
+    "url": "https://www.esma.europa.eu/publications-and-data/guidelines-recommendations-and-technical-standards",
+    "scrapedAt": "2026-05-09T08:47:44.052Z"
+  },
+  {
+    "source": "ESMA_WATCHDOG",
+    "type": "Regulatory_Update",
+    "title": "ESMA consults on guidelines on endorsement under the ESG Ratings Regulation 29/04/2026 The European Securities and Markets Authority (ESMA) has launched a public consultation on draft g",
+    "url": "https://www.esma.europa.eu/press-news/esma-news/esma-consults-guidelines-endorsement-under-esg-ratings-regulation",
+    "scrapedAt": "2026-05-09T08:47:44.052Z"
   }
 ]

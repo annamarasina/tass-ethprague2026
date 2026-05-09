@@ -4,7 +4,7 @@ import path from 'path';
 // The paths to your local databases
 const soloditPath = './scrapers/solodit-scraper/storage/datasets/default';
 const immunefiPath = './scrapers/immunefi-scraper/storage/datasets/default';
-// Add ESMA here if you got it working: const esmaPath = './scrapers/esma-watchdog/storage/datasets/default';
+const esmaPath = './scrapers/esma-watchdog/storage/datasets/default';
 
 let combinedData = [];
 
@@ -27,6 +27,7 @@ function readScrapedData(folderPath) {
 // Merge them!
 readScrapedData(soloditPath);
 readScrapedData(immunefiPath);
+readScrapedData(esmaPath);
 
 // Save the massive brain file
 fs.writeFileSync('./knowledge_base.json', JSON.stringify(combinedData, null, 2));

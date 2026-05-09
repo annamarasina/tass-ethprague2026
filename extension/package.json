@@ -1,0 +1,59 @@
+{
+  "name": "pre-flight-auditor",
+  "displayName": "Pre-Flight Auditor",
+  "description": "Autonomous smart contract pre-flight audit agent for VS Code.",
+  "version": "0.0.1",
+  "publisher": "preflight",
+  "private": true,
+  "engines": {
+    "vscode": "^1.105.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [
+    "*",
+    "onCommand:preflightAuditor.runAudit",
+    "onView:preflightAuditor.sidebar"
+  ],
+  "main": "./dist/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "preflightAuditor.runAudit",
+        "title": "Pre-Flight Auditor: Run Audit",
+        "category": "Pre-Flight Auditor"
+      }
+    ],
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "preflightAuditor",
+          "title": "Pre-Flight Auditor",
+          "icon": "resources/shield.svg"
+        }
+      ]
+    },
+    "views": {
+      "preflightAuditor": [
+        {
+          "id": "preflightAuditor.sidebar",
+          "name": "Audit",
+          "type": "webview"
+        }
+      ]
+    }
+  },
+  "scripts": {
+    "compile": "tsc -p .",
+    "postcompile": "node ./scripts/copy-webview-assets.mjs",
+    "watch": "tsc -watch -p .",
+    "check": "tsc -p . --noEmit",
+    "demo:check": "npm run compile"
+  },
+  "devDependencies": {
+    "@types/node": "^25.6.2",
+    "@types/vscode": "^1.105.0",
+    "typescript": "^6.0.3"
+  }
+}
