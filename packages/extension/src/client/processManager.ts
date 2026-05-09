@@ -49,11 +49,11 @@ export class AgentProcessManager implements vscode.Disposable {
   }
 
   private get agentEntrypoint(): string {
-    return resolve(this.options.workspaceRoot, "agent", "dist", "index.js");
+    return resolve(this.options.workspaceRoot, "packages", "agent", "dist", "index.js");
   }
 
   private get agentSourceEntrypoint(): string {
-    return resolve(this.options.workspaceRoot, "agent", "src", "index.ts");
+    return resolve(this.options.workspaceRoot, "packages", "agent", "src", "index.ts");
   }
 
   private getStartCommand(): { executable: string; args: string[] } {

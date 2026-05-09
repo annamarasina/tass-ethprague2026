@@ -1,11 +1,16 @@
 {
   "type": "module",
+  "workspaces": [
+    "packages/*"
+  ],
   "scripts": {
-    "backend3:demo": "tsx agent/src/scripts/backend3Demo.ts",
-    "backend3:demo:live": "tsx agent/src/scripts/backend3Demo.ts --live",
-    "agent:legal-debug": "tsx agent/src/scripts/legalDebug.ts",
-    "agent:smoke": "tsx agent/src/scripts/agentSmoke.ts",
-    "agent:typecheck": "tsc -p agent/tsconfig.json"
+    "agent:start": "tsx packages/agent/src/index.ts",
+    "agent:typecheck": "tsc -p packages/agent/tsconfig.json",
+    "agent:smoke": "tsx packages/agent/src/scripts/agentSmoke.ts",
+    "agent:legal-debug": "tsx packages/agent/src/scripts/legalDebug.ts",
+    "backend3:demo": "tsx packages/agent/src/scripts/backend3Demo.ts",
+    "backend3:demo:live": "tsx packages/agent/src/scripts/backend3Demo.ts --live",
+    "extension:compile": "npm run compile --prefix packages/extension"
   },
   "dependencies": {
     "@ethersphere/bee-js": "^12.1.0",

@@ -32,7 +32,7 @@ export class LegalKnowledgeProvider {
   private readonly maxRecords: number;
 
   constructor(options: LegalKnowledgeProviderOptions = {}) {
-    this.knowledgeBasePath = options.knowledgeBasePath ?? resolve(process.cwd(), "knowledge_base.json");
+    this.knowledgeBasePath = options.knowledgeBasePath ?? resolve(process.cwd(), "data", "knowledge_base.json");
     this.maxRecords = options.maxRecords ?? DEFAULT_MAX_RECORDS;
   }
 

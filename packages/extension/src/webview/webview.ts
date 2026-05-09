@@ -89,6 +89,8 @@ const runButton = document.querySelector<HTMLButtonElement>("#runAudit");
 const vulnerabilityButton = document.querySelector<HTMLButtonElement>("#runVulnerability");
 const statusMessage = document.querySelector<HTMLElement>("#statusMessage");
 const statePill = document.querySelector<HTMLElement>("#statePill");
+const statusCard = document.querySelector<HTMLElement>("#statusCard");
+const progressBar = document.querySelector<HTMLElement>("#progressBar");
 const selectedFile = document.querySelector<HTMLElement>("#selectedFile");
 const logs = document.querySelector<HTMLElement>("#logs");
 const logCount = document.querySelector<HTMLElement>("#logCount");
@@ -183,10 +185,19 @@ function render(): void {
 
   if (statePill) {
     statePill.textContent = model.state;
+    statePill.className = `pill ${model.state}`;
+  }
+
+  if (statusCard) {
+    statusCard.classList.toggle("running", model.state === "running");
+  }
+
+  if (progressBar) {
+    progressBar.classList.toggle("active", model.state === "running");
   }
 
   if (selectedFile) {
-    selectedFile.textContent = model.selectedFilePath ?? "No active Solidity file selected.";
+    selectedFile.textContent = model.selectedFilePath ?? "No active Solidity file selected";
   }
 
   if (logCount) {
