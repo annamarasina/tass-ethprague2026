@@ -1,20 +1,18 @@
 import type { AuditInput, AuditLogEvent, EmitLog, LegalReport } from "../../interfaces";
 import type { LegalAnalyzer } from "./LegalAnalyzer";
 import { summarizeCodeIntent } from "./codeIntentSummarizer";
+import { LegalCollisionAnalyzer } from "./legalCollisionAnalyzer";
 import { SwarmKnowledgeProvider } from "./swarmKnowledgeProvider";
 
 export class MockLegalAnalyzer implements LegalAnalyzer {
   private readonly knowledgeProvider = new SwarmKnowledgeProvider();
+  private readonly collisionAnalyzer = new LegalCollisionAnalyzer();
 
   async run(input: AuditInput, emit: EmitLog): Promise<LegalReport> {
     emit(event(input.auditId, "legal_analysis", "info", "Summarizing user contract intent"));
     await delay(250);
 
     const intent = summarizeCodeIntent(input.sourceCode, input.readmeText, input.commentsText);
-    const hasAdmin = intent.adminSignals.length > 0 || intent.adminFunctions.length > 0;
-    const claimsNoAdmin = intent.declaredClaims.some((claim) =>
-      ["no admin", "no owner", "fully decentralized", "trustless"].includes(claim),
-    );
 
     emit(event(input.auditId, "legal_scrape", "info", "Loading MiCA and ESMA legal knowledge"));
     await delay(250);
@@ -37,40 +35,19 @@ export class MockLegalAnalyzer implements LegalAnalyzer {
     emit(event(input.auditId, "legal_analysis", "info", "Comparing stated intent against code behavior"));
     await delay(250);
 
-    const mismatch = hasAdmin && claimsNoAdmin;
-
-    const report: LegalReport = {
-      riskLevel: mismatch ? "medium" : "low",
-      score: mismatch ? 72 : 91,
+    const report = await this.collisionAnalyzer.analyze({
+      auditId: input.auditId,
+      sourceCode: input.sourceCode,
+      intent,
+      legalKnowledge,
+      legalSources,
+      readmeText: input.readmeText,
+      commentsText: input.commentsText,
       x402PaymentTxHash: mockHash(`${input.auditId}:x402`),
       apifyRunId: `mock-apify-${input.auditId}`,
-      sources: legalSources,
-      intentSummary: intent.summary,
-      codeIntentMismatch: mismatch
-        ? [
-            {
-              claim: "No admin or fully decentralized control",
-              observedCodeBehavior: "The contract appears to expose owner/admin-controlled behavior.",
-              severity: "medium",
-              line: findFirstLine(input.sourceCode, /\bonlyOwner\b|\bowner\b|\badmin\b/i),
-            },
-          ]
-        : [],
-      regulatoryFindings: [
-        {
-          title: "Regulatory classification requires product-level review",
-          summary:
-            `The mock analyzer found no automatic MiCA blocker across ${legalKnowledge.length} legal knowledge record(s), but user-facing claims should stay aligned with actual admin and custody behavior.`,
-          riskLevel: mismatch ? "medium" : "low",
-          sourceUrl:
-            "https://www.esma.europa.eu/esmas-activities/digital-finance-and-innovation/markets-crypto-assets-regulation-mica",
-        },
-      ],
-      exploitNewsFindings: [],
-      sentimentSummary: `Mock legal sentiment is stable. Intent classifier labeled this as ${intent.likelyProtocolType}.`,
-    };
+    });
 
-    emit(event(input.auditId, "legal_analysis", "success", "Mock legal analyzer produced LegalReport", {
+    emit(event(input.auditId, "legal_analysis", "success", "Legal collision analyzer produced LegalReport", {
       riskLevel: report.riskLevel,
       score: report.score,
       mismatches: report.codeIntentMismatch.length,
@@ -78,12 +55,6 @@ export class MockLegalAnalyzer implements LegalAnalyzer {
 
     return report;
   }
-}
-
-function findFirstLine(sourceCode: string, pattern: RegExp): number | undefined {
-  const lines = sourceCode.split(/\r?\n/);
-  const index = lines.findIndex((line) => pattern.test(line));
-  return index >= 0 ? index + 1 : undefined;
 }
 
 function event(
