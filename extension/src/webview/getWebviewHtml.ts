@@ -223,6 +223,149 @@ export function getWebviewHtml(webview: vscode.Webview, extensionUri: vscode.Uri
       line-height: 1.4;
     }
 
+    .summary-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 10px;
+    }
+
+    .summary-title {
+      min-width: 0;
+    }
+
+    .summary-title strong {
+      display: block;
+      font-size: 13px;
+      line-height: 1.25;
+    }
+
+    .summary-subtitle {
+      margin-top: 3px;
+      color: var(--vscode-descriptionForeground);
+      font-size: 12px;
+      line-height: 1.35;
+    }
+
+    .action-button {
+      flex: 0 0 auto;
+      white-space: nowrap;
+    }
+
+    .action-button.hidden {
+      display: none;
+    }
+
+    .blocked-note {
+      display: none;
+      margin-top: 10px;
+      border-left: 3px solid var(--vscode-testing-iconFailed);
+      padding: 8px 10px;
+      background: var(--vscode-inputValidation-errorBackground);
+      color: var(--vscode-inputValidation-errorForeground);
+      font-size: 12px;
+      line-height: 1.4;
+    }
+
+    .blocked-note.visible {
+      display: block;
+    }
+
+    .section {
+      margin-top: 12px;
+      border-top: 1px solid var(--vscode-panel-border);
+      padding-top: 10px;
+    }
+
+    .section-title {
+      margin: 0 0 8px;
+      color: var(--vscode-foreground);
+      font-size: 12px;
+      font-weight: 650;
+      text-transform: uppercase;
+    }
+
+    .summary-text {
+      margin: 0;
+      color: var(--vscode-descriptionForeground);
+      font-size: 12px;
+      line-height: 1.45;
+    }
+
+    .list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .item {
+      border: 1px solid var(--vscode-panel-border);
+      border-radius: 5px;
+      padding: 8px;
+      background: var(--vscode-sideBar-background);
+    }
+
+    .item-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 8px;
+    }
+
+    .item-title {
+      min-width: 0;
+      font-size: 12px;
+      font-weight: 650;
+      line-height: 1.35;
+    }
+
+    .item-body {
+      margin-top: 5px;
+      color: var(--vscode-descriptionForeground);
+      font-size: 12px;
+      line-height: 1.4;
+    }
+
+    .tag {
+      flex: 0 0 auto;
+      border-radius: 999px;
+      padding: 1px 6px;
+      font-size: 10px;
+      line-height: 1.5;
+      text-transform: uppercase;
+      background: var(--vscode-badge-background);
+      color: var(--vscode-badge-foreground);
+    }
+
+    .tag.critical,
+    .tag.high {
+      background: var(--vscode-inputValidation-errorBackground);
+      color: var(--vscode-inputValidation-errorForeground);
+      border: 1px solid var(--vscode-inputValidation-errorBorder);
+    }
+
+    .tag.medium {
+      background: var(--vscode-inputValidation-warningBackground);
+      color: var(--vscode-inputValidation-warningForeground);
+      border: 1px solid var(--vscode-inputValidation-warningBorder);
+    }
+
+    .tag.low,
+    .tag.info {
+      background: var(--vscode-inputValidation-infoBackground);
+      color: var(--vscode-inputValidation-infoForeground);
+      border: 1px solid var(--vscode-inputValidation-infoBorder);
+    }
+
+    .meta-line {
+      margin-top: 5px;
+      color: var(--vscode-descriptionForeground);
+      font-family: var(--vscode-editor-font-family);
+      font-size: 11px;
+      line-height: 1.35;
+      word-break: break-word;
+    }
+
     .empty {
       color: var(--vscode-descriptionForeground);
     }
@@ -257,7 +400,13 @@ export function getWebviewHtml(webview: vscode.Webview, extensionUri: vscode.Uri
     </section>
 
     <section id="summary" class="summary">
-      <strong>Mock Audit Result</strong>
+      <div class="summary-header">
+        <div class="summary-title">
+          <strong>Pre-Flight Report</strong>
+          <div id="reportSubtitle" class="summary-subtitle">Mock analysis result</div>
+        </div>
+        <button id="mintCertificate" class="action-button hidden" type="button">Mint Certificate</button>
+      </div>
       <div class="summary-grid">
         <div class="metric">
           <div class="metric-label">Score</div>
@@ -273,6 +422,28 @@ export function getWebviewHtml(webview: vscode.Webview, extensionUri: vscode.Uri
         </div>
       </div>
       <div id="findingPreview" class="finding-preview"></div>
+      <div id="blockedNote" class="blocked-note"></div>
+
+      <div class="section">
+        <h2 class="section-title">Intent and Legal Risk</h2>
+        <p id="intentSummary" class="summary-text"></p>
+        <div id="intentMismatches" class="list"></div>
+      </div>
+
+      <div class="section">
+        <h2 class="section-title">Security Findings</h2>
+        <div id="securityFindings" class="list"></div>
+      </div>
+
+      <div class="section">
+        <h2 class="section-title">Storage Layout</h2>
+        <div id="storageFindings" class="list"></div>
+      </div>
+
+      <div class="section">
+        <h2 class="section-title">Sourcify Similarity</h2>
+        <div id="closestMatches" class="list"></div>
+      </div>
     </section>
   </main>
 

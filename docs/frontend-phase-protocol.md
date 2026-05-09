@@ -185,6 +185,9 @@ Acceptance criteria:
 Approval gate:
 - Stop after report UI is demo-ready.
 
+Status:
+- Complete.
+
 ## Phase 5: VS Code Diagnostics and Click-to-Line
 
 Purpose:
