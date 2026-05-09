@@ -1,8 +1,11 @@
 import type { AuditInput, AuditLogEvent, EmitLog, LegalReport } from "../../interfaces";
 import type { LegalAnalyzer } from "./LegalAnalyzer";
 import { summarizeCodeIntent } from "./codeIntentSummarizer";
+import { LegalKnowledgeProvider } from "./legalKnowledgeProvider";
 
 export class MockLegalAnalyzer implements LegalAnalyzer {
+  private readonly knowledgeProvider = new LegalKnowledgeProvider();
+
   async run(input: AuditInput, emit: EmitLog): Promise<LegalReport> {
     emit(event(input.auditId, "legal_analysis", "info", "Summarizing user contract intent"));
     await delay(250);
@@ -15,6 +18,8 @@ export class MockLegalAnalyzer implements LegalAnalyzer {
 
     emit(event(input.auditId, "legal_scrape", "info", "Loading mock MiCA and ESMA legal knowledge"));
     await delay(250);
+    const legalKnowledge = this.knowledgeProvider.loadLegalKnowledge();
+    const legalSources = this.knowledgeProvider.toLegalSources(legalKnowledge);
 
     emit(event(input.auditId, "legal_analysis", "info", "Comparing stated intent against code behavior"));
     await delay(250);
@@ -26,22 +31,7 @@ export class MockLegalAnalyzer implements LegalAnalyzer {
       score: mismatch ? 72 : 91,
       x402PaymentTxHash: mockHash(`${input.auditId}:x402`),
       apifyRunId: `mock-apify-${input.auditId}`,
-      sources: [
-        {
-          title: "Markets in Crypto-Assets Regulation (MiCA)",
-          url: "https://www.esma.europa.eu/esmas-activities/digital-finance-and-innovation/markets-crypto-assets-regulation-mica",
-          sourceType: "mica",
-          fetchedAt: input.timestamp,
-          summary: "Mock MiCA source used to evaluate whether the contract intent creates asset, custody, or issuer risk.",
-        },
-        {
-          title: "ESMA crypto-assets updates",
-          url: "https://www.esma.europa.eu/press-news/esma-news",
-          sourceType: "esma",
-          fetchedAt: input.timestamp,
-          summary: "Mock ESMA source used as cached regulatory context for the legal analyzer.",
-        },
-      ],
+      sources: legalSources,
       intentSummary: intent.summary,
       codeIntentMismatch: mismatch
         ? [
@@ -57,7 +47,7 @@ export class MockLegalAnalyzer implements LegalAnalyzer {
         {
           title: "Regulatory classification requires product-level review",
           summary:
-            "The mock analyzer found no automatic MiCA blocker, but user-facing claims should stay aligned with actual admin and custody behavior.",
+            `The mock analyzer found no automatic MiCA blocker across ${legalKnowledge.length} legal knowledge record(s), but user-facing claims should stay aligned with actual admin and custody behavior.`,
           riskLevel: mismatch ? "medium" : "low",
           sourceUrl:
             "https://www.esma.europa.eu/esmas-activities/digital-finance-and-innovation/markets-crypto-assets-regulation-mica",

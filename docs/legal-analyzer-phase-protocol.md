@@ -156,7 +156,7 @@ Approval gate:
 - Stop after local summarizer works on demo contracts.
 
 Status:
-- In progress.
+- Complete.
 
 ## Phase 3: Legal Knowledge Provider
 
@@ -185,6 +185,9 @@ Acceptance criteria:
 
 Approval gate:
 - Stop after provider returns normalized legal knowledge.
+
+Status:
+- In progress.
 
 ## Phase 4: Swarm Verified Knowledge Fetch
 
