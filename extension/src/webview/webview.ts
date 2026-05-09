@@ -198,6 +198,7 @@ function renderSummary(): void {
   replaceList(
     securityFindings,
     [...result.securityReport.findings].sort((a, b) => severityRank(a.severity) - severityRank(b.severity)).map((finding) => ({
+      id: finding.id,
       title: finding.title,
       tag: finding.severity,
       body: finding.description,
@@ -231,7 +232,7 @@ function renderSummary(): void {
 
 function replaceList(
   container: HTMLElement | null,
-  items: Array<{ title: string; tag: string; body: string; meta?: string }>,
+  items: Array<{ id?: string; title: string; tag: string; body: string; meta?: string }>,
   emptyText: string,
 ): void {
   if (!container) {
@@ -249,9 +250,23 @@ function replaceList(
   container.replaceChildren(...items.map(renderItem));
 }
 
-function renderItem(item: { title: string; tag: string; body: string; meta?: string }): HTMLElement {
+function renderItem(item: { id?: string; title: string; tag: string; body: string; meta?: string }): HTMLElement {
   const row = document.createElement("div");
   row.className = "item";
+
+  if (item.id) {
+    row.classList.add("clickable");
+    row.tabIndex = 0;
+    row.setAttribute("role", "button");
+    row.setAttribute("aria-label", `Open finding ${item.title}`);
+    row.addEventListener("click", () => vscode.postMessage({ type: "jumpToFinding", findingId: item.id as string }));
+    row.addEventListener("keydown", (event) => {
+      if (event.key === "Enter" || event.key === " ") {
+        event.preventDefault();
+        vscode.postMessage({ type: "jumpToFinding", findingId: item.id as string });
+      }
+    });
+  }
 
   const header = document.createElement("div");
   header.className = "item-header";

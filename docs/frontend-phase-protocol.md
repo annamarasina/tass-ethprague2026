@@ -215,6 +215,9 @@ Acceptance criteria:
 Approval gate:
 - Stop after editor integration works.
 
+Status:
+- Complete.
+
 ## Phase 6: Certification UI Integration
 
 Purpose:

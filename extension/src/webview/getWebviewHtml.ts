@@ -305,6 +305,16 @@ export function getWebviewHtml(webview: vscode.Webview, extensionUri: vscode.Uri
       background: var(--vscode-sideBar-background);
     }
 
+    .item.clickable {
+      cursor: pointer;
+    }
+
+    .item.clickable:hover,
+    .item.clickable:focus {
+      border-color: var(--vscode-focusBorder);
+      outline: none;
+    }
+
     .item-header {
       display: flex;
       align-items: flex-start;

@@ -17,7 +17,7 @@ export interface WebviewModel {
   auditResult?: AuditResult;
 }
 
-export type WebviewToExtensionMessage = { type: "runAudit" };
+export type WebviewToExtensionMessage = { type: "runAudit" } | { type: "jumpToFinding"; findingId: string };
 
 export type ExtensionToWebviewMessage =
   | { type: "replaceState"; model: WebviewModel }

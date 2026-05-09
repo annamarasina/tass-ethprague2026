@@ -2,6 +2,8 @@ import * as vscode from "vscode";
 import { randomUUID } from "node:crypto";
 import { MockAuditClient } from "../client/mockAuditClient";
 import { RUN_AUDIT_COMMAND } from "../constants";
+import { applyDiagnostics, clearDiagnostics } from "../diagnostics/applyDiagnostics";
+import { jumpToFinding } from "../diagnostics/jumpToFinding";
 import type { AuditLogEvent } from "../types";
 import { getWebviewHtml } from "./getWebviewHtml";
 import type { WebviewLog, WebviewModel, WebviewToExtensionMessage } from "./types";
@@ -15,7 +17,11 @@ export class PreflightViewProvider implements vscode.WebviewViewProvider {
   };
   private readonly mockAuditClient = new MockAuditClient();
 
-  constructor(private readonly extensionUri: vscode.Uri, private readonly outputChannel: vscode.OutputChannel) {}
+  constructor(
+    private readonly extensionUri: vscode.Uri,
+    private readonly outputChannel: vscode.OutputChannel,
+    private readonly diagnostics: vscode.DiagnosticCollection,
+  ) {}
 
   resolveWebviewView(webviewView: vscode.WebviewView): void {
     this.view = webviewView;
@@ -29,6 +35,10 @@ export class PreflightViewProvider implements vscode.WebviewViewProvider {
       webviewView.webview.onDidReceiveMessage((message: WebviewToExtensionMessage) => {
         if (message.type === "runAudit") {
           void vscode.commands.executeCommand(RUN_AUDIT_COMMAND);
+        }
+
+        if (message.type === "jumpToFinding") {
+          void jumpToFinding(this.model.auditResult, message.findingId);
         }
       }),
     );
@@ -45,6 +55,7 @@ export class PreflightViewProvider implements vscode.WebviewViewProvider {
     const activeFile = activeEditor?.document.uri.fsPath;
 
     await vscode.commands.executeCommand("workbench.view.extension.preflightAuditor");
+    clearDiagnostics(this.diagnostics);
 
     if (!activeFile) {
       this.setModel({
@@ -98,6 +109,7 @@ export class PreflightViewProvider implements vscode.WebviewViewProvider {
         statusMessage: auditResult.certificationEligible ? "Mock report ready" : "Certification blocked by mock findings",
         auditResult,
       });
+      applyDiagnostics(this.diagnostics, auditResult);
     } catch (error) {
       const message = error instanceof Error ? error.message : "Unknown audit error";
       this.setModel({
