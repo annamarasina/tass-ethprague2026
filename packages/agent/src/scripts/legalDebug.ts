@@ -19,7 +19,7 @@ const input: AuditInput = {
   auditId: `legal-debug-${Date.now()}`,
   selectedFilePath,
   sourceCode,
-  chainId: 84532,
+  chainId: 11155111,
   timestamp: new Date().toISOString(),
 };
 

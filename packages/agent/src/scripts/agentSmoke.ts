@@ -10,7 +10,7 @@ const input: AuditInput = {
   auditId: `agent-smoke-${Date.now()}`,
   selectedFilePath: fixturePath,
   sourceCode,
-  chainId: 84532,
+  chainId: 11155111,
   timestamp: new Date().toISOString(),
 };
 

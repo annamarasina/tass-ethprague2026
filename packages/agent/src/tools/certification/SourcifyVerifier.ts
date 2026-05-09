@@ -35,7 +35,7 @@ interface SourcifyJobResult {
 }
 
 const DEFAULT_API_BASE_URL = "https://sourcify.dev/server";
-const DEFAULT_CHAIN_ID = 84532;
+const DEFAULT_CHAIN_ID = 11155111;
 const DEFAULT_SOURCE_PATH = "contracts/src/AuditRegistry.sol";
 const DEFAULT_CONTRACT_IDENTIFIER = "src/AuditRegistry.sol:AuditRegistry";
 const DEFAULT_COMPILER_VERSION = "0.8.24+commit.e11b9ed9";
@@ -295,4 +295,3 @@ function sleep(ms: number): Promise<void> {
 function trimTrailingSlash(value: string): string {
   return value.endsWith("/") ? value.slice(0, -1) : value;
 }
-

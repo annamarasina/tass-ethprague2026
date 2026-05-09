@@ -8,15 +8,15 @@ import type {
 } from "../../interfaces";
 import { CertificationBlockedError, type CertificationService } from "./CertificationService";
 
-const DEFAULT_CHAIN_ID = 84532;
+const DEFAULT_CHAIN_ID = 11155111;
 const DEFAULT_REGISTRY_ADDRESS = "0x1000000000000000000000000000000000000001" as Hex;
-const DEFAULT_BASESCAN_BASE_URL = "https://sepolia.basescan.org";
+const DEFAULT_EXPLORER_BASE_URL = "https://sepolia.etherscan.io";
 const DEFAULT_SOURCIFY_BASE_URL = "https://repo.sourcify.dev/contracts/full_match";
 
 export interface MockCertificationServiceOptions {
   registryAddress?: Hex;
   chainId?: number;
-  baseScanBaseUrl?: string;
+  explorerBaseUrl?: string;
   sourcifyBaseUrl?: string;
   now?: () => Date;
 }
@@ -24,14 +24,14 @@ export interface MockCertificationServiceOptions {
 export class MockCertificationService implements CertificationService {
   private readonly registryAddress: Hex;
   private readonly chainId: number;
-  private readonly baseScanBaseUrl: string;
+  private readonly explorerBaseUrl: string;
   private readonly sourcifyBaseUrl: string;
   private readonly now: () => Date;
 
   constructor(options: MockCertificationServiceOptions = {}) {
     this.registryAddress = options.registryAddress ?? DEFAULT_REGISTRY_ADDRESS;
     this.chainId = options.chainId ?? DEFAULT_CHAIN_ID;
-    this.baseScanBaseUrl = trimTrailingSlash(options.baseScanBaseUrl ?? DEFAULT_BASESCAN_BASE_URL);
+    this.explorerBaseUrl = trimTrailingSlash(options.explorerBaseUrl ?? DEFAULT_EXPLORER_BASE_URL);
     this.sourcifyBaseUrl = trimTrailingSlash(options.sourcifyBaseUrl ?? DEFAULT_SOURCIFY_BASE_URL);
     this.now = options.now ?? (() => new Date());
   }
@@ -73,7 +73,7 @@ export class MockCertificationService implements CertificationService {
       registryAddress: this.registryAddress,
       transactionHash,
       certificateHash,
-      baseScanUrl: `${this.baseScanBaseUrl}/tx/${transactionHash}`,
+      baseScanUrl: `${this.explorerBaseUrl}/tx/${transactionHash}`,
       reportUri: auditResult.reportUri,
     };
 
@@ -122,4 +122,3 @@ export class MockCertificationService implements CertificationService {
 function trimTrailingSlash(value: string): string {
   return value.endsWith("/") ? value.slice(0, -1) : value;
 }
-

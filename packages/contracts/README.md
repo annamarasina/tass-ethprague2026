@@ -7,7 +7,7 @@ This folder contains the Foundry workspace for Backend Developer 3.
 Copy the root `.env.example` to `.env` and fill:
 
 ```bash
-BASE_SEPOLIA_RPC_URL=
+SEPOLIA_RPC_URL=
 PRIVATE_KEY=
 AGENT_ADDRESS=
 ```
@@ -46,21 +46,21 @@ Run the live Backend 3 demo after deployment and env setup:
 npm run backend3:demo:live
 ```
 
-Dry-run deployment against Base Sepolia:
+Dry-run deployment against Ethereum Sepolia:
 
 ```bash
 source ../.env
 forge script script/Deploy.s.sol:Deploy \
-  --rpc-url "$BASE_SEPOLIA_RPC_URL" \
+  --rpc-url "$SEPOLIA_RPC_URL" \
   --private-key "$PRIVATE_KEY"
 ```
 
-Broadcast deployment to Base Sepolia:
+Broadcast deployment to Ethereum Sepolia:
 
 ```bash
 source ../.env
 forge script script/Deploy.s.sol:Deploy \
-  --rpc-url "$BASE_SEPOLIA_RPC_URL" \
+  --rpc-url "$SEPOLIA_RPC_URL" \
   --private-key "$PRIVATE_KEY" \
   --broadcast
 ```
@@ -90,7 +90,7 @@ If a manual Foundry fallback is needed during the demo, use:
 ```bash
 forge verify-contract \
   --verifier sourcify \
-  --chain-id 84532 \
+  --chain-id 11155111 \
   "$AUDIT_REGISTRY_ADDRESS" \
   src/AuditRegistry.sol:AuditRegistry
 ```

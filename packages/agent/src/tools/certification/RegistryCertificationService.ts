@@ -11,7 +11,7 @@ import {
   type PrivateKeyAccount,
 } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
-import { baseSepolia } from "viem/chains";
+import { sepolia } from "viem/chains";
 import type { AuditLogEvent, AuditResult, CertificateResult, EmitLog, RegistryVerificationResult } from "../../interfaces";
 import { CertificationBlockedError, type CertificationService } from "./CertificationService";
 import { SourcifyVerifier } from "./SourcifyVerifier";
@@ -21,12 +21,12 @@ interface RegistryCertificationServiceOptions {
   rpcUrl?: string;
   privateKey?: Hex;
   registryAddress?: Address;
-  baseScanBaseUrl?: string;
+  explorerBaseUrl?: string;
   subjectAddress?: Address;
   chain?: Chain;
 }
 
-const DEFAULT_BASESCAN_BASE_URL = "https://sepolia.basescan.org";
+const DEFAULT_EXPLORER_BASE_URL = "https://sepolia.etherscan.io";
 
 export class MissingCertificationConfigError extends Error {
   constructor(variableName: string) {
@@ -39,18 +39,22 @@ export class RegistryCertificationService implements CertificationService {
   private readonly rpcUrl: string;
   private readonly privateKey: Hex;
   private readonly registryAddress: Address;
-  private readonly baseScanBaseUrl: string;
+  private readonly explorerBaseUrl: string;
   private readonly subjectAddress?: Address;
   private readonly chain: Chain;
   private readonly account: PrivateKeyAccount;
 
   constructor(options: RegistryCertificationServiceOptions = {}) {
-    this.rpcUrl = options.rpcUrl ?? requiredEnv("BASE_SEPOLIA_RPC_URL");
+    this.rpcUrl = options.rpcUrl ?? requiredEnv("SEPOLIA_RPC_URL", "ETHEREUM_SEPOLIA_RPC_URL", "BASE_SEPOLIA_RPC_URL");
     this.privateKey = normalizePrivateKey(options.privateKey ?? requiredEnv("AGENT_PRIVATE_KEY", "PRIVATE_KEY"));
     this.registryAddress = getAddress(options.registryAddress ?? requiredEnv("AUDIT_REGISTRY_ADDRESS"));
-    this.baseScanBaseUrl = trimTrailingSlash(options.baseScanBaseUrl ?? process.env.BASESCAN_BASE_URL ?? DEFAULT_BASESCAN_BASE_URL);
-    this.subjectAddress = options.subjectAddress ? getAddress(options.subjectAddress) : undefined;
-    this.chain = options.chain ?? baseSepolia;
+    this.explorerBaseUrl = trimTrailingSlash(
+      options.explorerBaseUrl ?? process.env.ETHERSCAN_BASE_URL ?? process.env.BASESCAN_BASE_URL ?? DEFAULT_EXPLORER_BASE_URL,
+    );
+    this.subjectAddress = options.subjectAddress
+      ? getAddress(options.subjectAddress)
+      : optionalAddressEnv("AUDIT_CERTIFICATE_SUBJECT_ADDRESS");
+    this.chain = options.chain ?? sepolia;
     this.account = privateKeyToAccount(this.privateKey);
   }
 
@@ -122,7 +126,7 @@ export class RegistryCertificationService implements CertificationService {
       registryAddress: this.registryAddress,
       transactionHash,
       certificateHash,
-      baseScanUrl: `${this.baseScanBaseUrl}/tx/${transactionHash}`,
+      baseScanUrl: `${this.explorerBaseUrl}/tx/${transactionHash}`,
       reportUri: auditResult.reportUri,
     };
   }
@@ -165,6 +169,11 @@ function requiredEnv(...variableNames: string[]): string {
   }
 
   throw new MissingCertificationConfigError(variableNames.join(" or "));
+}
+
+function optionalAddressEnv(variableName: string): Address | undefined {
+  const value = process.env[variableName]?.trim();
+  return value ? getAddress(value) : undefined;
 }
 
 function normalizePrivateKey(value: string): Hex {

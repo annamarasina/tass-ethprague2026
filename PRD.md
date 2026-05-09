@@ -114,11 +114,26 @@ BASE_SEPOLIA_RPC_URL=
 BASESCAN_BASE_URL=https://sepolia.basescan.org
 APIFY_TOKEN=
 APIFY_ACTOR_ID=
+APIFY_PROVIDER_MODE=token # token or mcp-x402
+APIFY_MCP_COMMAND=./node_modules/.bin/mcpc
+APIFY_MCP_SESSION=@apify-x402
+APIFY_MCP_DRY_RUN=false
 X402_NETWORK=base-sepolia
 X402_ASSET=USDC
 SOURCIFY_API_BASE=https://sourcify.dev/server
 AUDIT_REGISTRY_ADDRESS=
 ```
+
+For the intended agentic Apify payment flow, set `APIFY_PROVIDER_MODE=mcp-x402` and do not set `APIFY_TOKEN`.
+The local machine must have `mcpc` configured with an x402 wallet and an Apify MCP session:
+
+```bash
+npm install -g @apify/mcpc
+mcpc x402 init
+mcpc connect "mcp.apify.com?payment=x402" @apify-x402 --x402
+```
+
+For no-spend demos, set `APIFY_MCP_DRY_RUN=true`. The agent verifies the x402 MCP session with a free docs tool and then falls back to cached legal knowledge instead of running a paid Actor.
 
 ## 8. Strict TypeScript Interfaces
 

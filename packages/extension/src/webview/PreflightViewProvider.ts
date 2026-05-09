@@ -1,7 +1,7 @@
 import * as vscode from "vscode";
 import { randomUUID } from "node:crypto";
 import { AgentClient } from "../client/agentClient";
-import { CertificationBlockedError, MockCertificationClient } from "../client/certificationClient";
+import { AgentCertificationClient, CertificationBlockedError } from "../client/certificationClient";
 import { AgentProcessManager } from "../client/processManager";
 import { RUN_AUDIT_COMMAND } from "../constants";
 import { applyDiagnostics, clearDiagnostics } from "../diagnostics/applyDiagnostics";
@@ -19,7 +19,7 @@ export class PreflightViewProvider implements vscode.WebviewViewProvider {
   };
   private readonly processManager: AgentProcessManager;
   private readonly agentClient: AgentClient;
-  private readonly certificationClient = new MockCertificationClient();
+  private readonly certificationClient: AgentCertificationClient;
 
   constructor(
     private readonly extensionUri: vscode.Uri,
@@ -29,6 +29,7 @@ export class PreflightViewProvider implements vscode.WebviewViewProvider {
     const workspaceRoot = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath ?? vscode.Uri.joinPath(extensionUri, "..").fsPath;
     this.processManager = new AgentProcessManager({ workspaceRoot, outputChannel });
     this.agentClient = new AgentClient(this.processManager);
+    this.certificationClient = new AgentCertificationClient(this.processManager);
   }
 
   resolveWebviewView(webviewView: vscode.WebviewView): void {
@@ -110,7 +111,7 @@ export class PreflightViewProvider implements vscode.WebviewViewProvider {
           auditId,
           selectedFilePath: activeFile ?? "pasted-code.sol",
           sourceCode,
-          chainId: 84532,
+          chainId: 11155111,
           timestamp: new Date().toISOString(),
         },
         (event) => this.appendAuditLog(event),

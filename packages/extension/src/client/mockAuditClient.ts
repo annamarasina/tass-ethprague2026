@@ -4,7 +4,18 @@ type EmitAuditLog = (event: AuditLogEvent) => void;
 
 export class MockAuditClient {
   async runAudit(input: AuditInput, emit: EmitAuditLog): Promise<AuditResult> {
-    await delay(200);
+    await this.emitPhase(input.auditId, emit, "init", "info", "Reading selected Solidity file");
+    await this.emitPhase(input.auditId, emit, "legal_payment", "info", "Mock x402 payment prepared for Apify actor", {
+      network: "sepolia",
+      asset: "USDC",
+    });
+    await this.emitPhase(input.auditId, emit, "legal_scrape", "info", "Fetched recent exploit and regulatory sources");
+    await this.emitPhase(input.auditId, emit, "legal_analysis", "success", "Legal intent risk scored");
+    await this.emitPhase(input.auditId, emit, "security_parse", "info", "Parsed Solidity AST");
+    await this.emitPhase(input.auditId, emit, "security_similarity", "info", "Compared against Sourcify exploit patterns");
+    await this.emitPhase(input.auditId, emit, "security_storage", "warn", "Storage layout review found upgradeability signals");
+    await this.emitPhase(input.auditId, emit, "security_analysis", "success", "Security analysis complete");
+
     const result = this.buildResult(input);
     return result;
   }
@@ -186,4 +197,3 @@ function delay(ms: number): Promise<void> {
     setTimeout(resolve, ms);
   });
 }
-
