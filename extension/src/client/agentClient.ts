@@ -16,39 +16,57 @@ export class AgentClient {
   constructor(private readonly processManager: AgentProcessManager) {}
 
   async runAudit(input: AuditInput, emit: EmitAuditLog): Promise<AuditResult> {
+    emit(this.localFallbackLog(input.auditId, "[AUDIT] Starting audit client initialization..."));
+    
     if (process.env.PREFLIGHT_AGENT_MODE !== "live") {
-      emit(this.localFallbackLog(input.auditId, "Using mock audit client. Set PREFLIGHT_AGENT_MODE=live to attempt local agent mode."));
+      const msg = "[AGENT] Using mock audit client. Set PREFLIGHT_AGENT_MODE=live to attempt local agent mode.";
+      emit(this.localFallbackLog(input.auditId, msg));
+      emit(this.localFallbackLog(input.auditId, "[MOCK] Initializing mock audit client..."));
       return this.mockAuditClient.runAudit(input, emit);
     }
 
+    emit(this.localFallbackLog(input.auditId, "[AGENT] Live agent mode enabled. Checking process manager availability..."));
     if (!this.processManager.isAvailable()) {
-      emit(this.localFallbackLog(input.auditId, "Local agent entrypoint unavailable; falling back to mock audit client."));
+      const msg = "[ERROR] Local agent entrypoint unavailable; falling back to mock audit client.";
+      emit(this.localFallbackLog(input.auditId, msg));
+      emit(this.localFallbackLog(input.auditId, "[MOCK] Initializing mock audit client as fallback..."));
       return this.mockAuditClient.runAudit(input, emit);
     }
 
     try {
+      emit(this.localFallbackLog(input.auditId, "[AGENT] ✓ Process manager available. Starting live agent..."));
       return await this.runLiveAgent(input, emit);
     } catch (error) {
       const message = error instanceof Error ? error.message : "Unknown local agent error";
-      emit(this.localFallbackLog(input.auditId, `Local agent failed: ${message}. Falling back to mock audit client.`));
+      const stack = error instanceof Error ? error.stack : "no stack trace";
+      const msg = `[ERROR] Local agent failed: ${message}. Stack: ${stack}. Falling back to mock audit client.`;
+      emit(this.localFallbackLog(input.auditId, msg));
+      emit(this.localFallbackLog(input.auditId, "[MOCK] Initializing mock audit client as fallback..."));
       return this.mockAuditClient.runAudit(input, emit);
     }
   }
 
   private async runLiveAgent(input: AuditInput, emit: EmitAuditLog): Promise<AuditResult> {
+    emit(this.localFallbackLog(input.auditId, "[LIVE] Spawning agent process..."));
     const child = this.processManager.start();
+    emit(this.localFallbackLog(input.auditId, `[LIVE] ✓ Agent process spawned (PID: ${child.pid})`));
 
     return new Promise<AuditResult>((resolve, reject) => {
+      emit(this.localFallbackLog(input.auditId, "[LIVE] Setting 120s timeout for audit result..."));
       const timeout = setTimeout(() => {
         cleanup();
-        reject(new Error("Timed out waiting for local agent audit result"));
+        const error = "[ERROR] Timed out waiting for local agent audit result (120s)";
+        emit(this.localFallbackLog(input.auditId, error));
+        reject(new Error(error));
       }, 120_000);
 
+      emit(this.localFallbackLog(input.auditId, "[LIVE] Creating readline interface for stdout..."));
       const lineReader = createInterface({ input: child.stdout });
 
       const cleanup = (): void => {
         clearTimeout(timeout);
         lineReader.close();
+        emit(this.localFallbackLog(input.auditId, "[LIVE] Cleaned up process resources"));
       };
 
       lineReader.on("line", (line) => {
@@ -56,24 +74,42 @@ export class AgentClient {
           return;
         }
 
-        const response = parseAgentResponse(line);
+        try {
+          const response = parseAgentResponse(line);
 
-        if (response.type === "log") {
-          emit(response.event);
-          return;
-        }
+          if (response.type === "log") {
+            emit(response.event);
+            return;
+          }
 
-        if (response.type === "error") {
+          if (response.type === "error") {
+            cleanup();
+            const error = `[ERROR] Agent returned error: ${response.message}`;
+            emit(this.localFallbackLog(input.auditId, error));
+            reject(new Error(response.message));
+            return;
+          }
+
+          emit(this.localFallbackLog(input.auditId, "[LIVE] ✓ Received audit result from agent"));
           cleanup();
-          reject(new Error(response.message));
-          return;
+          resolve(response.auditResult);
+        } catch (parseError) {
+          const message = parseError instanceof Error ? parseError.message : "Unknown parse error";
+          emit(this.localFallbackLog(input.auditId, `[ERROR] Failed to parse agent response: ${message}`));
+          emit(this.localFallbackLog(input.auditId, `[DEBUG] Raw line: ${line.substring(0, 200)}`));
         }
-
-        cleanup();
-        resolve(response.auditResult);
       });
 
+      lineReader.on("error", (error) => {
+        const message = error instanceof Error ? error.message : String(error);
+        emit(this.localFallbackLog(input.auditId, `[ERROR] Readline error: ${message}`));
+        cleanup();
+        reject(error);
+      });
+
+      emit(this.localFallbackLog(input.auditId, "[LIVE] Sending audit input to agent process..."));
       child.stdin.write(`${JSON.stringify({ type: "runAudit", input })}\n`);
+      emit(this.localFallbackLog(input.auditId, "[LIVE] ✓ Input sent, waiting for response..."));
     });
   }
 
