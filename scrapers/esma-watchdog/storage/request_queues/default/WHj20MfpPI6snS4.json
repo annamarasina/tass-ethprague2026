@@ -1,0 +1,9 @@
+{
+	"id": "WHj20MfpPI6snS4",
+	"json": "{\"id\":\"WHj20MfpPI6snS4\",\"url\":\"https://www.eba.europa.eu/regulation-and-policy/mica\",\"loadedUrl\":\"https://www.eba.europa.eu/regulation-and-policy/mica\",\"uniqueKey\":\"https://www.eba.europa.eu/regulation-and-policy/mica\",\"method\":\"GET\",\"noRetry\":false,\"retryCount\":0,\"errorMessages\":[],\"headers\":{},\"userData\":{\"__crawlee\":{\"state\":4}},\"handledAt\":\"2026-05-09T08:47:43.725Z\"}",
+	"method": "GET",
+	"orderNo": null,
+	"retryCount": 0,
+	"uniqueKey": "https://www.eba.europa.eu/regulation-and-policy/mica",
+	"url": "https://www.eba.europa.eu/regulation-and-policy/mica"
+}

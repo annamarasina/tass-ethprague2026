@@ -1,5 +1,7 @@
 {
+  "type": "module",
   "dependencies": {
+    "@ethersphere/bee-js": "^12.1.0",
     "cheerio": "^1.2.0",
     "crawlee": "^3.16.0",
     "puppeteer": "^24.43.0"

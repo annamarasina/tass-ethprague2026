@@ -1,0 +1,121 @@
+{
+  "usableSessionsCount": 2,
+  "retiredSessionsCount": 0,
+  "sessions": [
+    {
+      "id": "session_9mPo8xD6t2",
+      "cookieJar": {
+        "version": "tough-cookie@6.0.1",
+        "storeType": "MemoryCookieStore",
+        "rejectPublicSuffixes": true,
+        "enableLooseMode": false,
+        "allowSpecialUseDomain": true,
+        "prefixSecurity": "silent",
+        "cookies": []
+      },
+      "userData": {},
+      "maxErrorScore": 3,
+      "errorScoreDecrement": 0.5,
+      "expiresAt": "2026-05-08T20:56:14.919Z",
+      "createdAt": "2026-05-08T20:06:14.919Z",
+      "usageCount": 0,
+      "maxUsageCount": 50,
+      "errorScore": 0
+    },
+    {
+      "id": "session_CKJdkqRZ1W",
+      "cookieJar": {
+        "version": "tough-cookie@6.0.1",
+        "storeType": "MemoryCookieStore",
+        "rejectPublicSuffixes": true,
+        "enableLooseMode": false,
+        "allowSpecialUseDomain": true,
+        "prefixSecurity": "silent",
+        "cookies": [
+          {
+            "key": "_ga_JPHMK6RZT0",
+            "value": "GS2.1.s1778270776$o1$g0$t1778270776$j60$l0$h1895178738",
+            "expires": "2027-06-12T20:06:16.546Z",
+            "domain": "immunefi.com",
+            "path": "/",
+            "hostOnly": false,
+            "creation": "2026-05-08T20:06:17.206Z",
+            "lastAccessed": "2026-05-08T20:06:17.206Z"
+          },
+          {
+            "key": "_ga",
+            "value": "GA1.1.1460215964.1778270777",
+            "expires": "2027-06-12T20:06:16.546Z",
+            "domain": "immunefi.com",
+            "path": "/",
+            "hostOnly": false,
+            "creation": "2026-05-08T20:06:17.207Z",
+            "lastAccessed": "2026-05-08T20:06:17.207Z"
+          },
+          {
+            "key": "_rdt_uuid",
+            "value": "1778270776551.bacffba2-a154-4ed7-a8ed-282926710423",
+            "expires": "2026-08-06T20:06:16.000Z",
+            "domain": "immunefi.com",
+            "path": "/",
+            "secure": true,
+            "hostOnly": false,
+            "creation": "2026-05-08T20:06:17.207Z",
+            "lastAccessed": "2026-05-08T20:06:17.207Z"
+          },
+          {
+            "key": "_hjSession_6471261",
+            "value": "eyJpZCI6Ijg1MzE0Y2MzLTRhM2UtNGIyOS1iMTBmLWY0N2NkZWM3YzUyOCIsImMiOjE3NzgyNzA3NzY4MjAsInMiOjAsInIiOjAsInNiIjowLCJzciI6MCwic2UiOjAsImZzIjoxLCJzcCI6MH0=",
+            "expires": "2026-05-08T20:36:16.000Z",
+            "domain": "immunefi.com",
+            "path": "/",
+            "secure": true,
+            "hostOnly": false,
+            "creation": "2026-05-08T20:06:17.207Z",
+            "lastAccessed": "2026-05-08T20:06:17.207Z"
+          },
+          {
+            "key": "_gcl_au",
+            "value": "1.1.96631662.1778270776",
+            "expires": "2026-08-06T20:06:16.000Z",
+            "domain": "immunefi.com",
+            "path": "/",
+            "hostOnly": false,
+            "creation": "2026-05-08T20:06:17.207Z",
+            "lastAccessed": "2026-05-08T20:06:17.207Z"
+          },
+          {
+            "key": "_twpid",
+            "value": "tw.1778270776608.55783923345035530",
+            "expires": "2027-06-02T20:06:16.610Z",
+            "domain": "immunefi.com",
+            "path": "/",
+            "secure": true,
+            "hostOnly": false,
+            "creation": "2026-05-08T20:06:17.207Z",
+            "lastAccessed": "2026-05-08T20:06:17.207Z"
+          },
+          {
+            "key": "_hjSessionUser_6471261",
+            "value": "eyJpZCI6IjhjNWRkY2RkLTlmYjAtNTFlNC04Mzc5LTY2OWU4MmM0YjkzMCIsImNyZWF0ZWQiOjE3NzgyNzA3NzY4MTksImV4aXN0aW5nIjpmYWxzZX0=",
+            "expires": "2027-05-08T20:06:16.000Z",
+            "domain": "immunefi.com",
+            "path": "/",
+            "secure": true,
+            "hostOnly": false,
+            "creation": "2026-05-08T20:06:17.207Z",
+            "lastAccessed": "2026-05-08T20:06:17.207Z"
+          }
+        ]
+      },
+      "userData": {},
+      "maxErrorScore": 3,
+      "errorScoreDecrement": 0.5,
+      "expiresAt": "2026-05-08T20:56:14.920Z",
+      "createdAt": "2026-05-08T20:06:14.920Z",
+      "usageCount": 1,
+      "maxUsageCount": 50,
+      "errorScore": 0
+    }
+  ]
+}

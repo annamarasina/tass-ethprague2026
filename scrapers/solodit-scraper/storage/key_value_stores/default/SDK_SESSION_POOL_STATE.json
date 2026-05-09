@@ -3,7 +3,7 @@
   "retiredSessionsCount": 0,
   "sessions": [
     {
-      "id": "session_aEsVfC5jTJ",
+      "id": "session_oadoHSLFmg",
       "cookieJar": {
         "version": "tough-cookie@6.0.1",
         "storeType": "MemoryCookieStore",
@@ -16,14 +16,14 @@
       "userData": {},
       "maxErrorScore": 3,
       "errorScoreDecrement": 0.5,
-      "expiresAt": "2026-05-08T17:23:44.307Z",
-      "createdAt": "2026-05-08T16:33:44.307Z",
+      "expiresAt": "2026-05-08T20:34:48.330Z",
+      "createdAt": "2026-05-08T19:44:48.330Z",
       "usageCount": 0,
       "maxUsageCount": 50,
       "errorScore": 0
     },
     {
-      "id": "session_x5F23FtvfK",
+      "id": "session_uZFMLGcgr4",
       "cookieJar": {
         "version": "tough-cookie@6.0.1",
         "storeType": "MemoryCookieStore",
@@ -34,41 +34,41 @@
         "cookies": [
           {
             "key": "_ga_4EYV1MDWQC",
-            "value": "GS2.1.s1778258026$o1$g0$t1778258026$j60$l0$h0",
-            "expires": "2027-06-12T16:33:46.178Z",
+            "value": "GS2.1.s1778269490$o1$g0$t1778269490$j60$l0$h0",
+            "expires": "2027-06-12T19:44:50.078Z",
             "domain": "cyfrin.io",
             "path": "/",
             "hostOnly": false,
-            "creation": "2026-05-08T16:33:46.212Z",
-            "lastAccessed": "2026-05-08T16:33:46.212Z"
+            "creation": "2026-05-08T19:44:50.121Z",
+            "lastAccessed": "2026-05-08T19:44:50.121Z"
           },
           {
             "key": "_ga",
-            "value": "GA1.1.1212763849.1778258026",
-            "expires": "2027-06-12T16:33:46.167Z",
+            "value": "GA1.1.457311671.1778269490",
+            "expires": "2027-06-12T19:44:50.067Z",
             "domain": "cyfrin.io",
             "path": "/",
             "hostOnly": false,
-            "creation": "2026-05-08T16:33:46.214Z",
-            "lastAccessed": "2026-05-08T16:33:46.214Z"
+            "creation": "2026-05-08T19:44:50.123Z",
+            "lastAccessed": "2026-05-08T19:44:50.123Z"
           },
           {
             "key": "_gcl_au",
-            "value": "1.1.375158918.1778258026",
-            "expires": "2026-08-06T16:33:46.000Z",
+            "value": "1.1.352096656.1778269490",
+            "expires": "2026-08-06T19:44:50.000Z",
             "domain": "cyfrin.io",
             "path": "/",
             "hostOnly": false,
-            "creation": "2026-05-08T16:33:46.215Z",
-            "lastAccessed": "2026-05-08T16:33:46.215Z"
+            "creation": "2026-05-08T19:44:50.124Z",
+            "lastAccessed": "2026-05-08T19:44:50.124Z"
           }
         ]
       },
       "userData": {},
       "maxErrorScore": 3,
       "errorScoreDecrement": 0.5,
-      "expiresAt": "2026-05-08T17:23:44.308Z",
-      "createdAt": "2026-05-08T16:33:44.308Z",
+      "expiresAt": "2026-05-08T20:34:48.331Z",
+      "createdAt": "2026-05-08T19:44:48.331Z",
       "usageCount": 1,
       "maxUsageCount": 50,
       "errorScore": 0

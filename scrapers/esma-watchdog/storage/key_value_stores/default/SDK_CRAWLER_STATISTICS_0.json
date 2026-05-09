@@ -1,0 +1,41 @@
+{
+  "requestsFinished": 2,
+  "requestsFailed": 0,
+  "requestsRetries": 1,
+  "requestsFailedPerMinute": 0,
+  "requestsFinishedPerMinute": 48,
+  "requestMinDurationMillis": 343,
+  "requestMaxDurationMillis": 2012,
+  "requestTotalFailedDurationMillis": 0,
+  "requestTotalFinishedDurationMillis": 2355,
+  "crawlerStartedAt": "2026-05-09T08:47:41.596Z",
+  "crawlerFinishedAt": "2026-05-09T08:47:44.070Z",
+  "statsPersistedAt": "2026-05-09T08:47:44.070Z",
+  "crawlerRuntimeMillis": 2489,
+  "crawlerLastStartTimestamp": 1778316461581,
+  "requestRetryHistogram": [
+    1,
+    1
+  ],
+  "statsId": 0,
+  "requestAvgFailedDurationMillis": null,
+  "requestAvgFinishedDurationMillis": 1178,
+  "requestTotalDurationMillis": 2355,
+  "requestsTotal": 2,
+  "requestsWithStatusCode": {
+    "403": 1,
+    "404": 1
+  },
+  "errors": {},
+  "retryErrors": {
+    "/Users/annasdomain/Desktop/Projects/tass-ethprague2026/node_modules/@crawlee/basic/internals/basic-crawler.js:913:19": {
+      "missing error code": {
+        "Error": {
+          "Request blocked - received 403 status code.": {
+            "count": 1
+          }
+        }
+      }
+    }
+  }
+}
