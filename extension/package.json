@@ -6,8 +6,11 @@
   "publisher": "preflight",
   "private": true,
   "engines": {
-    "vscode": "^1.105.0"
+    "vscode": "^1.82.0"
   },
+  "extensionKind": [
+    "ui"
+  ],
   "categories": [
     "Other"
   ],

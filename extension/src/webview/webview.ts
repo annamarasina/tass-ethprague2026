@@ -65,7 +65,6 @@ interface WebviewModel {
 
 type WebviewToExtensionMessage =
   | { type: "runAudit" }
-  | { type: "selectSolidityFile" }
   | { type: "jumpToFinding"; findingId: string }
   | { type: "mintCertificate" }
   | { type: "openExternal"; url: string };
@@ -86,7 +85,7 @@ let model: WebviewModel = preflightWindow.__PRE_FLIGHT_MODEL__ ?? {
 };
 
 const runButton = document.querySelector<HTMLButtonElement>("#runAudit");
-const selectFileButton = document.querySelector<HTMLButtonElement>("#selectFile");
+const vulnerabilityButton = document.querySelector<HTMLButtonElement>("#runVulnerability");
 const statusMessage = document.querySelector<HTMLElement>("#statusMessage");
 const statePill = document.querySelector<HTMLElement>("#statePill");
 const selectedFile = document.querySelector<HTMLElement>("#selectedFile");
@@ -114,8 +113,8 @@ runButton?.addEventListener("click", () => {
   vscode.postMessage({ type: "runAudit" });
 });
 
-selectFileButton?.addEventListener("click", () => {
-  vscode.postMessage({ type: "selectSolidityFile" });
+vulnerabilityButton?.addEventListener("click", () => {
+  vscode.postMessage({ type: "runAudit" });
 });
 
 mintCertificate?.addEventListener("click", () => {
@@ -161,8 +160,8 @@ function render(): void {
     runButton.disabled = model.state === "running";
   }
 
-  if (selectFileButton) {
-    selectFileButton.disabled = model.state === "running";
+  if (vulnerabilityButton) {
+    vulnerabilityButton.disabled = model.state === "running";
   }
 
   if (statusMessage) {

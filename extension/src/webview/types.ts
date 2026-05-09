@@ -20,7 +20,6 @@ export interface WebviewModel {
 
 export type WebviewToExtensionMessage =
   | { type: "runAudit" }
-  | { type: "selectSolidityFile" }
   | { type: "jumpToFinding"; findingId: string }
   | { type: "mintCertificate" }
   | { type: "openExternal"; url: string };

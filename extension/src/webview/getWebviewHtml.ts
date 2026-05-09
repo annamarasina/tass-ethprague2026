@@ -442,8 +442,8 @@ export function getWebviewHtml(webview: vscode.Webview, extensionUri: vscode.Uri
         <div class="subtitle">Autonomous pre-flight smart contract audit</div>
       </div>
       <div class="actions">
-        <button id="selectFile" class="secondary-button" type="button">Select</button>
-        <button id="runAudit" type="button">Run Audit</button>
+        <button id="runAudit" type="button">Compliance</button>
+        <button id="runVulnerability" class="secondary-button" type="button">Vulnerability</button>
       </div>
     </section>
 

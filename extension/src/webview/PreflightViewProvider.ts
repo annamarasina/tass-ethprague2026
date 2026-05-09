@@ -13,7 +13,6 @@ import type { WebviewLog, WebviewModel, WebviewToExtensionMessage } from "./type
 export class PreflightViewProvider implements vscode.WebviewViewProvider {
   private view?: vscode.WebviewView;
   private readonly disposables: vscode.Disposable[] = [];
-  private selectedFileUri?: vscode.Uri;
   private model: WebviewModel = {
     state: "idle",
     logs: [],
@@ -46,10 +45,6 @@ export class PreflightViewProvider implements vscode.WebviewViewProvider {
           void vscode.commands.executeCommand(RUN_AUDIT_COMMAND);
         }
 
-        if (message.type === "selectSolidityFile") {
-          void this.selectSolidityFile();
-        }
-
         if (message.type === "jumpToFinding") {
           void jumpToFinding(this.model.auditResult, message.findingId);
         }
@@ -73,7 +68,7 @@ export class PreflightViewProvider implements vscode.WebviewViewProvider {
   }
 
   async runAuditFromActiveEditor(): Promise<void> {
-    const selectedDocument = await this.getSelectedSolidityDocument();
+    const selectedDocument = this.getSelectedSolidityDocument();
     const activeFile = selectedDocument?.uri.fsPath;
 
     await vscode.commands.executeCommand("workbench.view.extension.preflightAuditor");
@@ -164,41 +159,10 @@ export class PreflightViewProvider implements vscode.WebviewViewProvider {
     this.appendLog(event.level, event.phase, event.message);
   }
 
-  private async selectSolidityFile(): Promise<void> {
-    const selected = await vscode.window.showOpenDialog({
-      canSelectFiles: true,
-      canSelectFolders: false,
-      canSelectMany: false,
-      filters: {
-        Solidity: ["sol"],
-      },
-      title: "Select Solidity file to audit",
-    });
-
-    const [uri] = selected ?? [];
-
-    if (!uri) {
-      return;
-    }
-
-    this.selectedFileUri = uri;
-    this.setModel({
-      ...this.model,
-      selectedFilePath: uri.fsPath,
-      statusMessage: "Solidity file selected",
-    });
-    this.appendLog("info", "init", `Selected ${uri.fsPath}`);
-  }
-
-  private async getSelectedSolidityDocument(): Promise<vscode.TextDocument | undefined> {
-    if (this.selectedFileUri) {
-      return vscode.workspace.openTextDocument(this.selectedFileUri);
-    }
-
+  private getSelectedSolidityDocument(): vscode.TextDocument | undefined {
     const activeEditor = vscode.window.activeTextEditor;
 
     if (activeEditor?.document.uri.fsPath.endsWith(".sol")) {
-      this.selectedFileUri = activeEditor.document.uri;
       return activeEditor.document;
     }
 
