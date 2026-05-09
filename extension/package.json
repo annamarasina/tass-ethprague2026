@@ -29,7 +29,7 @@
         {
           "id": "preflightAuditor",
           "title": "Pre-Flight Auditor",
-          "icon": "$(shield)"
+          "icon": "resources/shield.svg"
         }
       ]
     },
@@ -44,6 +44,7 @@
   },
   "scripts": {
     "compile": "tsc -p .",
+    "postcompile": "node ./scripts/copy-webview-assets.mjs",
     "watch": "tsc -watch -p .",
     "check": "tsc -p . --noEmit"
   },
@@ -53,4 +54,3 @@
     "typescript": "^6.0.3"
   }
 }
-

@@ -79,7 +79,7 @@ Approval gate:
 - Stop after scaffold compiles.
 
 Status:
-- In progress.
+- Complete.
 
 ## Phase 2: Sidebar WebView Shell
 
@@ -112,6 +112,9 @@ Acceptance criteria:
 
 Approval gate:
 - Stop after WebView shell is interactive.
+
+Status:
+- Complete.
 
 ## Phase 3: Mock Audit Orchestrator Integration
 
