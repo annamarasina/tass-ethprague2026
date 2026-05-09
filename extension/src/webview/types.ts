@@ -19,6 +19,7 @@ export interface WebviewModel {
 }
 
 export type WebviewToExtensionMessage =
+  | { type: "runComplianceAudit" }
   | { type: "runAudit" }
   | { type: "jumpToFinding"; findingId: string }
   | { type: "mintCertificate" }

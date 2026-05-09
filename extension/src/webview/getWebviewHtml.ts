@@ -132,6 +132,74 @@ export function getWebviewHtml(webview: vscode.Webview, extensionUri: vscode.Uri
       background: var(--vscode-button-secondaryHoverBackground);
     }
 
+    .payment-panel {
+      display: none;
+      border: 1px solid var(--vscode-panel-border);
+      border-radius: 6px;
+      padding: 10px;
+      background: var(--vscode-editor-background);
+    }
+
+    .payment-panel.visible {
+      display: block;
+    }
+
+    .payment-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 10px;
+    }
+
+    .payment-title {
+      font-size: 12px;
+      font-weight: 650;
+      line-height: 1.35;
+    }
+
+    .payment-subtitle {
+      margin-top: 3px;
+      color: var(--vscode-descriptionForeground);
+      font-size: 12px;
+      line-height: 1.35;
+    }
+
+    .payment-amount {
+      flex: 0 0 auto;
+      border: 1px solid var(--vscode-panel-border);
+      border-radius: 5px;
+      padding: 6px 8px;
+      font-family: var(--vscode-editor-font-family);
+      font-size: 12px;
+      white-space: nowrap;
+    }
+
+    .payment-details {
+      display: grid;
+      grid-template-columns: auto 1fr;
+      gap: 6px 10px;
+      margin-top: 10px;
+      font-size: 12px;
+      line-height: 1.35;
+    }
+
+    .payment-label {
+      color: var(--vscode-descriptionForeground);
+    }
+
+    .payment-value {
+      min-width: 0;
+      font-family: var(--vscode-editor-font-family);
+      word-break: break-word;
+    }
+
+    .payment-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 6px;
+      margin-top: 10px;
+    }
+
     .log-panel {
       display: flex;
       min-height: 230px;
@@ -177,7 +245,104 @@ export function getWebviewHtml(webview: vscode.Webview, extensionUri: vscode.Uri
 
     .log-message {
       min-width: 0;
+      font-family: var(--vscode-editor-font-family);
+      white-space: pre-wrap;
       word-break: break-word;
+    }
+
+    .trace-card {
+      grid-column: 1 / -1;
+      border: 1px solid var(--vscode-panel-border);
+      border-radius: 6px;
+      padding: 9px;
+      background: var(--vscode-editor-background);
+    }
+
+    .trace-heading {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      margin-bottom: 8px;
+    }
+
+    .trace-title {
+      min-width: 0;
+      font-family: var(--vscode-font-family);
+      font-size: 12px;
+      font-weight: 650;
+      line-height: 1.35;
+    }
+
+    .trace-step {
+      flex: 0 0 auto;
+      border-radius: 999px;
+      padding: 2px 7px;
+      color: var(--vscode-badge-foreground);
+      background: var(--vscode-badge-background);
+      font-size: 11px;
+      line-height: 1.4;
+    }
+
+    .trace-note {
+      margin-bottom: 8px;
+      color: var(--vscode-descriptionForeground);
+      font-size: 11px;
+      line-height: 1.4;
+      word-break: break-word;
+    }
+
+    .trace-table {
+      display: grid;
+      gap: 4px;
+    }
+
+    .trace-row {
+      display: grid;
+      grid-template-columns: 52px 50px 74px minmax(72px, 1fr);
+      gap: 6px;
+      align-items: center;
+      font-family: var(--vscode-editor-font-family);
+      font-size: 11px;
+      line-height: 1.35;
+    }
+
+    .trace-row.highlight {
+      color: var(--vscode-testing-iconPassed);
+      font-weight: 650;
+    }
+
+    .trace-bar {
+      color: var(--vscode-testing-iconPassed);
+      white-space: nowrap;
+      overflow: hidden;
+    }
+
+    .trace-kv {
+      display: grid;
+      grid-template-columns: 82px 1fr;
+      gap: 5px 8px;
+      font-family: var(--vscode-editor-font-family);
+      font-size: 11px;
+      line-height: 1.45;
+    }
+
+    .trace-key {
+      color: var(--vscode-descriptionForeground);
+    }
+
+    .trace-value {
+      min-width: 0;
+      word-break: break-word;
+    }
+
+    .trace-output {
+      margin: 0;
+      color: var(--vscode-foreground);
+      font-family: var(--vscode-font-family);
+      font-size: 12px;
+      line-height: 1.45;
+      white-space: normal;
     }
 
     .log.success .log-message {
@@ -443,7 +608,7 @@ export function getWebviewHtml(webview: vscode.Webview, extensionUri: vscode.Uri
       </div>
       <div class="actions">
         <button id="runAudit" type="button">Compliance</button>
-        <button id="runVulnerability" class="secondary-button" type="button">Vulnerability</button>
+        <button id="runVulnerability" type="button">Vulnerability</button>
       </div>
     </section>
 
@@ -453,6 +618,28 @@ export function getWebviewHtml(webview: vscode.Webview, extensionUri: vscode.Uri
         <span id="statePill" class="pill">idle</span>
       </div>
       <div id="selectedFile" class="file">No active Solidity file selected.</div>
+    </section>
+
+    <section id="paymentPanel" class="payment-panel" aria-live="polite">
+      <div class="payment-header">
+        <div>
+          <div class="payment-title">Mock x402 Payment Request</div>
+          <div id="paymentSubtitle" class="payment-subtitle">Approve the simulated payment for the live Apify compliance lookup.</div>
+        </div>
+        <div class="payment-amount">0.01 USDC</div>
+      </div>
+      <div class="payment-details">
+        <span class="payment-label">Network</span>
+        <span class="payment-value">Base Sepolia</span>
+        <span class="payment-label">Service</span>
+        <span class="payment-value">Apify Google Search compliance scrape</span>
+        <span class="payment-label">Receiver</span>
+        <span class="payment-value">Mock x402 facilitator</span>
+      </div>
+      <div class="payment-actions">
+        <button id="cancelPayment" class="secondary-button" type="button">Cancel</button>
+        <button id="approvePayment" type="button">Approve x402</button>
+      </div>
     </section>
 
     <section class="log-panel">

@@ -64,6 +64,7 @@ interface WebviewModel {
 }
 
 type WebviewToExtensionMessage =
+  | { type: "runComplianceAudit" }
   | { type: "runAudit" }
   | { type: "jumpToFinding"; findingId: string }
   | { type: "mintCertificate" }
@@ -108,9 +109,13 @@ const certifiedPanel = document.querySelector<HTMLElement>("#certifiedPanel");
 const certificateHash = document.querySelector<HTMLElement>("#certificateHash");
 const baseScanLink = document.querySelector<HTMLButtonElement>("#baseScanLink");
 const sourcifyLink = document.querySelector<HTMLButtonElement>("#sourcifyLink");
+const paymentPanel = document.querySelector<HTMLElement>("#paymentPanel");
+const paymentSubtitle = document.querySelector<HTMLElement>("#paymentSubtitle");
+const approvePayment = document.querySelector<HTMLButtonElement>("#approvePayment");
+const cancelPayment = document.querySelector<HTMLButtonElement>("#cancelPayment");
 
 runButton?.addEventListener("click", () => {
-  vscode.postMessage({ type: "runAudit" });
+  showMockPaymentRequest();
 });
 
 vulnerabilityButton?.addEventListener("click", () => {
@@ -131,6 +136,14 @@ sourcifyLink?.addEventListener("click", () => {
   if (model.certificateResult?.sourcifyUrl) {
     vscode.postMessage({ type: "openExternal", url: model.certificateResult.sourcifyUrl });
   }
+});
+
+approvePayment?.addEventListener("click", () => {
+  approveMockPayment();
+});
+
+cancelPayment?.addEventListener("click", () => {
+  hideMockPaymentRequest();
 });
 
 window.addEventListener("message", (event: MessageEvent<ExtensionToWebviewMessage>) => {
@@ -157,11 +170,11 @@ render();
 
 function render(): void {
   if (runButton) {
-    runButton.disabled = model.state === "running";
+    runButton.disabled = model.state === "running" || paymentPanel?.classList.contains("visible") === true;
   }
 
   if (vulnerabilityButton) {
-    vulnerabilityButton.disabled = model.state === "running";
+    vulnerabilityButton.disabled = model.state === "running" || paymentPanel?.classList.contains("visible") === true;
   }
 
   if (statusMessage) {
@@ -195,7 +208,60 @@ function render(): void {
   renderSummary();
 }
 
+function showMockPaymentRequest(): void {
+  if (model.state === "running") {
+    return;
+  }
+
+  paymentPanel?.classList.add("visible");
+
+  if (paymentSubtitle) {
+    paymentSubtitle.textContent = "Approve the simulated payment for the live Apify compliance lookup.";
+  }
+
+  if (approvePayment) {
+    approvePayment.disabled = false;
+    approvePayment.textContent = "Approve x402";
+  }
+
+  if (cancelPayment) {
+    cancelPayment.disabled = false;
+  }
+
+  render();
+}
+
+function hideMockPaymentRequest(): void {
+  paymentPanel?.classList.remove("visible");
+  render();
+}
+
+function approveMockPayment(): void {
+  if (approvePayment) {
+    approvePayment.disabled = true;
+    approvePayment.textContent = "Signing...";
+  }
+
+  if (cancelPayment) {
+    cancelPayment.disabled = true;
+  }
+
+  if (paymentSubtitle) {
+    paymentSubtitle.textContent = "Mock x402 authorization prepared. Submitting paid audit request...";
+  }
+
+  window.setTimeout(() => {
+    hideMockPaymentRequest();
+    vscode.postMessage({ type: "runComplianceAudit" });
+  }, 700);
+}
+
 function renderLog(log: WebviewModel["logs"][number]): HTMLElement {
+  const trace = renderComplianceTrace(log);
+  if (trace) {
+    return trace;
+  }
+
   const row = document.createElement("div");
   row.className = `log ${log.level}`;
 
@@ -209,6 +275,145 @@ function renderLog(log: WebviewModel["logs"][number]): HTMLElement {
 
   row.append(meta, message);
   return row;
+}
+
+function renderComplianceTrace(log: WebviewModel["logs"][number]): HTMLElement | undefined {
+  if (log.phase === "similarity_search") {
+    return renderTraceCard("1/5", "Similarity search", "Embedding cache loaded and ranked against the vulnerability dataset.", [
+      ["1", "10", "0.9141", "██████████████████"],
+      ["2", "4", "0.7409", "██████████████"],
+      ["3", "9", "0.7222", "██████████████"],
+      ["4", "5", "0.7120", "██████████████"],
+      ["5", "0", "0.7021", "██████████████"],
+      ["6", "2", "0.6982", "█████████████"],
+      ["7", "6", "0.6450", "████████████"],
+      ["8", "1", "0.6411", "████████████"],
+      ["9", "11", "0.6333", "████████████"],
+      ["10", "7", "0.6330", "████████████"],
+      ["11", "3", "0.6176", "████████████"],
+      ["12", "8", "0.6095", "████████████"],
+    ]);
+  }
+
+  if (log.phase === "similarity_filter") {
+    return renderTraceKeyValueCard("2/5", "Filter similarity > 0.90", [
+      ["Selected row", "10"],
+      ["Score", "0.9141"],
+      ["Status", "Passed threshold"],
+    ], "success");
+  }
+
+  if (log.phase === "sourcify_hash") {
+    return renderTraceKeyValueCard("3/5", "Sourcify source_hash + BigQuery", [
+      ["Mode", "MOCK"],
+      ["Row", "10"],
+      ["Score", "0.9141"],
+      ["Source hash", "0x02409faad32169a9ae3a2477a0f094573eb2a256cf1e211269654edf653bc654"],
+    ]);
+  }
+
+  if (log.phase === "findings_crawl") {
+    return renderTraceKeyValueCard("4/5", "Known findings crawl", [
+      ["Mode", "MOCK"],
+      ["Focus row", "11"],
+      ["Issue", "Value of token1OutBase might became stale in TRIBERagequit.sol #126"],
+      ["URL", "https://github.com/code-423n4/2021-11-fei-findings/issues/126"],
+    ], "warn");
+  }
+
+  if (log.phase === "compliance_output") {
+    const row = document.createElement("div");
+    row.className = "trace-card";
+    row.append(renderTraceHeading("5/5", "Compliance output"));
+
+    const output = document.createElement("p");
+    output.className = "trace-output";
+    output.textContent = "The USER contract, a simple implementation of a fiat-collateralized stablecoin, allows the owner to mint tokens and users to burn them. The REFERENCE findings highlight a vulnerability in the TRIBE/FEI ragequit contract where a state variable (token1OutBase) can become stale, leading to incorrect calculations during user interactions. This analysis will assess whether the USER contract exhibits a similar class of vulnerability and provide recommendations for improvement.";
+    row.append(output);
+    return row;
+  }
+
+  return undefined;
+}
+
+function renderTraceCard(step: string, title: string, note: string, rows: string[][]): HTMLElement {
+  const card = document.createElement("div");
+  card.className = "trace-card";
+  card.append(renderTraceHeading(step, title));
+
+  const noteElement = document.createElement("div");
+  noteElement.className = "trace-note";
+  noteElement.textContent = note;
+
+  const table = document.createElement("div");
+  table.className = "trace-table";
+
+  for (const [rank, row, score, bar] of rows) {
+    const item = document.createElement("div");
+    item.className = `trace-row${rank === "1" ? " highlight" : ""}`;
+    item.append(
+      traceCell(`#${rank}`),
+      traceCell(`row ${row}`),
+      traceCell(score),
+      traceCell(bar, "trace-bar"),
+    );
+    table.append(item);
+  }
+
+  card.append(noteElement, table);
+  return card;
+}
+
+function renderTraceKeyValueCard(
+  step: string,
+  title: string,
+  rows: Array<[string, string]>,
+  tone?: "success" | "warn",
+): HTMLElement {
+  const card = document.createElement("div");
+  card.className = `trace-card${tone ? ` ${tone}` : ""}`;
+  card.append(renderTraceHeading(step, title));
+
+  const table = document.createElement("div");
+  table.className = "trace-kv";
+
+  for (const [key, value] of rows) {
+    const keyElement = document.createElement("div");
+    keyElement.className = "trace-key";
+    keyElement.textContent = key;
+
+    const valueElement = document.createElement("div");
+    valueElement.className = "trace-value";
+    valueElement.textContent = value;
+
+    table.append(keyElement, valueElement);
+  }
+
+  card.append(table);
+  return card;
+}
+
+function renderTraceHeading(step: string, title: string): HTMLElement {
+  const heading = document.createElement("div");
+  heading.className = "trace-heading";
+
+  const titleElement = document.createElement("div");
+  titleElement.className = "trace-title";
+  titleElement.textContent = title;
+
+  const stepElement = document.createElement("div");
+  stepElement.className = "trace-step";
+  stepElement.textContent = step;
+
+  heading.append(titleElement, stepElement);
+  return heading;
+}
+
+function traceCell(text: string, className?: string): HTMLElement {
+  const element = document.createElement("div");
+  element.className = className ?? "";
+  element.textContent = text;
+  return element;
 }
 
 function defaultStatus(current: WebviewModel): string {

@@ -3,6 +3,7 @@
   "scripts": {
     "backend3:demo": "tsx agent/src/scripts/backend3Demo.ts",
     "backend3:demo:live": "tsx agent/src/scripts/backend3Demo.ts --live",
+    "agent:legal-debug": "tsx agent/src/scripts/legalDebug.ts",
     "agent:smoke": "tsx agent/src/scripts/agentSmoke.ts",
     "agent:typecheck": "tsc -p agent/tsconfig.json"
   },

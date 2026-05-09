@@ -8,6 +8,55 @@ export interface LegalCollisionPromptInput {
   sourceExcerpt: string;
 }
 
+/*
+Example legal-side flow:
+
+Input:
+- A Solidity file implements a stablecoin vault with deposit(), withdraw(), Ownable,
+  and onlyOwner-controlled fund movement.
+- README/comments claim "trustless", "non-custodial", or "no admin".
+- Apify/Swarm returns compact MiCA/SEC/legal-news records about stablecoin custody,
+  admin control, and user-facing disclosure risk.
+
+The prompt should make the LLM compare:
+1. Claimed intent: "non-custodial, no-admin stablecoin vault"
+2. Observable code behavior: "contract holds USDC and owner can move funds"
+3. Legal context: "custody/control over crypto-assets may require review"
+
+Expected JSON-style output:
+{
+  "riskLevel": "high",
+  "score": 42,
+  "intentSummary": "The contract appears to custody stablecoin deposits with owner-controlled withdrawals.",
+  "codeIntentMismatch": [
+    {
+      "claim": "No admin can move user funds",
+      "observedCodeBehavior": "The withdraw function is restricted to onlyOwner and transfers stablecoins from the vault.",
+      "severity": "high",
+      "line": 9
+    },
+    {
+      "claim": "Non-custodial vault",
+      "observedCodeBehavior": "The contract receives and holds user stablecoin deposits.",
+      "severity": "medium",
+      "line": 5
+    }
+  ],
+  "regulatoryFindings": [
+    {
+      "title": "Stablecoin custody claims require review",
+      "summary": "The contract appears to handle stablecoin custody while making non-custodial or no-admin claims.",
+      "riskLevel": "high",
+      "sourceUrl": "https://example.com/source-from-compactLegalKnowledge"
+    }
+  ],
+  "exploitNewsFindings": [],
+  "sentimentSummary": "Current legal/news context increases risk for custody/admin-control claims."
+}
+
+The LLM must output strict JSON because the VS Code diagnostics, report UI,
+certification gates, and audit score calculation consume these fields directly.
+*/
 export const LEGAL_COLLISION_SYSTEM_PROMPT = [
   "You are the legal-risk analyzer inside Pre-Flight Auditor.",
   "Compare the user's stated smart-contract intent against observable Solidity behavior and compact regulatory knowledge.",
