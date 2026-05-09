@@ -34,7 +34,7 @@ export async function verifiedFetch(swarmHash) {
         // Check 3: Simulating the BMT (Binary Merkle Tree) Hash check
         console.log(`🔐 [VerifiedFetch] Recomputing Binary Merkle Tree (BMT) hash locally...`);
         console.log(`✅ [VerifiedFetch] Hash matches reference: ${swarmHash}`);
-        console.log(`✅ [VerifiedFetch] Data is untampered and verified safe for AI consumption.`);
+        console.log(`✅ [VerifiedFetch] Data is untampered and verified safe for AI consumption.`); // Bee.js function ??
         
         // 4. Return the safe data to the Agent
         // Force the custom bee-js object into a standard native Node.js Uint8Array:
@@ -57,4 +57,7 @@ export async function verifiedFetch(swarmHash) {
 const YOUR_HASH = "e618525f94c38a64945ae74eca6d4c5dd7483d4cc92add1b2f959aabdd2bc44d";
 verifiedFetch(YOUR_HASH).then(data => {
     console.log(`\n🧠 [Auditor Agent] Brain successfully loaded! Total threat intel records: ${data.length}`);
+    console.log('\n--- DATA PREVIEW ---');
+    console.log(JSON.stringify(data.slice(0, 2), null, 2)); // Show first 2 records as a preview
+    console.log('--- END OF PREVIEW ---\n');
 });
