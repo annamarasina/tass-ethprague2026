@@ -176,6 +176,53 @@ export function getWebviewHtml(webview: vscode.Webview, extensionUri: vscode.Uri
       color: var(--vscode-testing-iconFailed);
     }
 
+    .summary {
+      display: none;
+      border: 1px solid var(--vscode-panel-border);
+      border-radius: 6px;
+      padding: 10px;
+      background: var(--vscode-editor-background);
+    }
+
+    .summary.visible {
+      display: block;
+    }
+
+    .summary-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 8px;
+      margin-top: 8px;
+    }
+
+    .metric {
+      min-width: 0;
+      border: 1px solid var(--vscode-panel-border);
+      border-radius: 5px;
+      padding: 8px;
+    }
+
+    .metric-label {
+      color: var(--vscode-descriptionForeground);
+      font-size: 11px;
+      line-height: 1.2;
+    }
+
+    .metric-value {
+      margin-top: 4px;
+      font-size: 16px;
+      font-weight: 650;
+      line-height: 1.2;
+      word-break: break-word;
+    }
+
+    .finding-preview {
+      margin-top: 10px;
+      color: var(--vscode-descriptionForeground);
+      font-size: 12px;
+      line-height: 1.4;
+    }
+
     .empty {
       color: var(--vscode-descriptionForeground);
     }
@@ -208,6 +255,25 @@ export function getWebviewHtml(webview: vscode.Webview, extensionUri: vscode.Uri
         <div class="empty">Run an audit to stream activity here.</div>
       </div>
     </section>
+
+    <section id="summary" class="summary">
+      <strong>Mock Audit Result</strong>
+      <div class="summary-grid">
+        <div class="metric">
+          <div class="metric-label">Score</div>
+          <div id="scoreMetric" class="metric-value">--</div>
+        </div>
+        <div class="metric">
+          <div class="metric-label">Legal</div>
+          <div id="legalMetric" class="metric-value">--</div>
+        </div>
+        <div class="metric">
+          <div class="metric-label">Similarity</div>
+          <div id="similarityMetric" class="metric-value">--</div>
+        </div>
+      </div>
+      <div id="findingPreview" class="finding-preview"></div>
+    </section>
   </main>
 
   <script nonce="${nonce}">
@@ -228,4 +294,3 @@ function getNonce(): string {
 
   return nonce;
 }
-

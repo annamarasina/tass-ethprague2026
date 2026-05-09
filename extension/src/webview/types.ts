@@ -1,3 +1,5 @@
+import type { AuditResult } from "../types";
+
 export type WebviewState = "idle" | "running" | "report" | "blocked" | "certified" | "error";
 
 export interface WebviewLog {
@@ -12,6 +14,7 @@ export interface WebviewModel {
   selectedFilePath?: string;
   logs: WebviewLog[];
   statusMessage?: string;
+  auditResult?: AuditResult;
 }
 
 export type WebviewToExtensionMessage = { type: "runAudit" };
@@ -19,4 +22,3 @@ export type WebviewToExtensionMessage = { type: "runAudit" };
 export type ExtensionToWebviewMessage =
   | { type: "replaceState"; model: WebviewModel }
   | { type: "appendLog"; log: WebviewLog; state?: WebviewState; statusMessage?: string };
-

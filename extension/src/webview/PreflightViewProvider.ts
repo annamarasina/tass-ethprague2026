@@ -1,5 +1,8 @@
 import * as vscode from "vscode";
+import { randomUUID } from "node:crypto";
+import { MockAuditClient } from "../client/mockAuditClient";
 import { RUN_AUDIT_COMMAND } from "../constants";
+import type { AuditLogEvent } from "../types";
 import { getWebviewHtml } from "./getWebviewHtml";
 import type { WebviewLog, WebviewModel, WebviewToExtensionMessage } from "./types";
 
@@ -10,6 +13,7 @@ export class PreflightViewProvider implements vscode.WebviewViewProvider {
     state: "idle",
     logs: [],
   };
+  private readonly mockAuditClient = new MockAuditClient();
 
   constructor(private readonly extensionUri: vscode.Uri, private readonly outputChannel: vscode.OutputChannel) {}
 
@@ -64,6 +68,9 @@ export class PreflightViewProvider implements vscode.WebviewViewProvider {
       return;
     }
 
+    const sourceCode = activeEditor.document.getText();
+    const auditId = `audit-${randomUUID()}`;
+
     this.outputChannel.appendLine(`Starting mock audit for ${activeFile}`);
     this.setModel({
       state: "running",
@@ -72,31 +79,35 @@ export class PreflightViewProvider implements vscode.WebviewViewProvider {
       statusMessage: "Audit running",
     });
 
-    await this.streamMockAudit(activeFile);
-  }
+    try {
+      const auditResult = await this.mockAuditClient.runAudit(
+        {
+          auditId,
+          selectedFilePath: activeFile,
+          sourceCode,
+          chainId: 84532,
+          timestamp: new Date().toISOString(),
+        },
+        (event) => this.appendAuditLog(event),
+      );
 
-  private async streamMockAudit(activeFile: string): Promise<void> {
-    const phases: Array<Pick<WebviewLog, "level" | "phase" | "message">> = [
-      { level: "info", phase: "init", message: "Reading selected Solidity file" },
-      { level: "info", phase: "legal_payment", message: "Preparing Apify x402 payment request" },
-      { level: "info", phase: "legal_scrape", message: "Streaming recent exploit and regulatory sources" },
-      { level: "info", phase: "security_parse", message: "Parsing Solidity AST" },
-      { level: "info", phase: "security_similarity", message: "Comparing against Sourcify-backed exploit patterns" },
-      { level: "info", phase: "security_storage", message: "Checking storage layout signals" },
-      { level: "success", phase: "report", message: "Mock audit shell complete" },
-    ];
-
-    for (const phase of phases) {
-      await delay(420);
-      this.appendLog(phase.level, phase.phase, phase.message);
+      this.setModel({
+        ...this.model,
+        state: auditResult.certificationEligible ? "report" : "blocked",
+        selectedFilePath: activeFile,
+        statusMessage: auditResult.certificationEligible ? "Mock report ready" : "Certification blocked by mock findings",
+        auditResult,
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Unknown audit error";
+      this.setModel({
+        ...this.model,
+        state: "error",
+        selectedFilePath: activeFile,
+        statusMessage: message,
+      });
+      this.appendLog("error", "error", message);
     }
-
-    this.setModel({
-      ...this.model,
-      state: "report",
-      selectedFilePath: activeFile,
-      statusMessage: "Mock report ready",
-    });
   }
 
   private setModel(model: WebviewModel): void {
@@ -125,11 +136,8 @@ export class PreflightViewProvider implements vscode.WebviewViewProvider {
       statusMessage: this.model.statusMessage,
     });
   }
-}
 
-function delay(ms: number): Promise<void> {
-  return new Promise((resolve) => {
-    setTimeout(resolve, ms);
-  });
+  private appendAuditLog(event: AuditLogEvent): void {
+    this.appendLog(event.level, event.phase, event.message);
+  }
 }
-
