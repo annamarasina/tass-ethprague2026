@@ -14,45 +14,28 @@ export class AgentProcessManager implements vscode.Disposable {
   constructor(private readonly options: AgentProcessManagerOptions) {}
 
   isAvailable(): boolean {
-    return existsSync(this.agentEntrypoint);
+    return existsSync(this.agentEntrypoint) || existsSync(this.agentSourceEntrypoint);
   }
 
   start(): ChildProcessWithoutNullStreams {
-    this.options.outputChannel.appendLine(`[PROCESS] Checking if process is already running...`);
     if (this.process && !this.process.killed) {
-      this.options.outputChannel.appendLine(`[PROCESS] ✓ Reusing existing process (PID: ${this.process.pid})`);
       return this.process;
     }
 
-    this.options.outputChannel.appendLine(`[PROCESS] Checking agent entrypoint availability...`);
-    if (!this.isAvailable()) {
-      const error = `Agent entrypoint not found: ${this.agentEntrypoint}`;
-      this.options.outputChannel.appendLine(`[ERROR] ${error}`);
-      throw new Error(error);
-    }
+    const command = this.getStartCommand();
 
-    this.options.outputChannel.appendLine(`[PROCESS] ✓ Agent entrypoint found at: ${this.agentEntrypoint}`);
-    this.options.outputChannel.appendLine(`[PROCESS] Spawning Node process with entrypoint...`);
-    this.options.outputChannel.appendLine(`[PROCESS] Working directory: ${this.options.workspaceRoot}`);
-
-    this.process = spawn("node", [this.agentEntrypoint], {
+    this.process = spawn(command.executable, command.args, {
       cwd: this.options.workspaceRoot,
       env: process.env,
       stdio: "pipe",
     });
 
-    this.options.outputChannel.appendLine(`[PROCESS] ✓ Process spawned (PID: ${this.process.pid})`);
-
     this.process.stderr.on("data", (chunk: Buffer) => {
-      this.options.outputChannel.appendLine(`[AGENT STDERR] ${chunk.toString("utf8").trimEnd()}`);
-    });
-
-    this.process.on("error", (error) => {
-      this.options.outputChannel.appendLine(`[ERROR] Process error: ${error.message}`);
+      this.options.outputChannel.appendLine(`[agent stderr] ${chunk.toString("utf8").trimEnd()}`);
     });
 
     this.process.on("exit", (code, signal) => {
-      this.options.outputChannel.appendLine(`[PROCESS] Process exited (code=${code ?? "null"}, signal=${signal ?? "null"})`);
+      this.options.outputChannel.appendLine(`[agent] exited code=${code ?? "null"} signal=${signal ?? "null"}`);
       this.process = undefined;
     });
 
@@ -68,5 +51,20 @@ export class AgentProcessManager implements vscode.Disposable {
   private get agentEntrypoint(): string {
     return resolve(this.options.workspaceRoot, "agent", "dist", "index.js");
   }
-}
 
+  private get agentSourceEntrypoint(): string {
+    return resolve(this.options.workspaceRoot, "agent", "src", "index.ts");
+  }
+
+  private getStartCommand(): { executable: string; args: string[] } {
+    if (existsSync(this.agentEntrypoint)) {
+      return { executable: "node", args: [this.agentEntrypoint] };
+    }
+
+    if (existsSync(this.agentSourceEntrypoint)) {
+      return { executable: "npx", args: ["tsx", this.agentSourceEntrypoint] };
+    }
+
+    throw new Error(`Agent entrypoint not found: ${this.agentEntrypoint}`);
+  }
+}

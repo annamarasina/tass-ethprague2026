@@ -282,6 +282,9 @@ Acceptance criteria:
 Approval gate:
 - Stop after Apify adapter works or has clear fallback.
 
+Status:
+- Complete.
+
 ## Phase 7: Orchestrator Integration
 
 Purpose:
@@ -309,6 +312,36 @@ Acceptance criteria:
 
 Approval gate:
 - Stop after frontend can consume legal analyzer through the agent bridge.
+
+Status:
+- Complete.
+
+## Phase 8: Demo Readiness and Smoke Harness
+
+Purpose:
+- Make the live legal analyzer path easy for the team to verify before the demo.
+
+Files expected:
+- `agent/src/auditOrchestrator.ts`
+- `agent/src/scripts/agentSmoke.ts`
+- updates to `package.json`
+
+Implementation tasks:
+- Extract audit orchestration from the stdin/stdout protocol entrypoint.
+- Add a smoke script that runs the legal analyzer, fallback Apify/x402 metadata, and mock security composition.
+- Validate required audit log phases.
+- Validate the final `LegalReport` includes `apifyRunId` and `x402PaymentTxHash`.
+
+Acceptance criteria:
+- `npm run agent:smoke` passes.
+- `npm run agent:typecheck` passes.
+- Extension compile remains green.
+
+Approval gate:
+- Stop after smoke harness works.
+
+Status:
+- Complete.
 
 ## Approval Format
 
