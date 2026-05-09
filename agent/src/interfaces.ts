@@ -9,6 +9,7 @@ export interface AuditLogEvent {
     | "init"
     | "legal_payment"
     | "legal_scrape"
+    | "swarm_fetch"
     | "legal_analysis"
     | "security_parse"
     | "security_similarity"
@@ -26,17 +27,50 @@ export interface AuditLogEvent {
 
 export type EmitLog = (event: AuditLogEvent) => void;
 
+export interface AuditInput {
+  auditId: string;
+  selectedFilePath: string;
+  sourceCode: string;
+  readmeText?: string;
+  commentsText?: string;
+  chainId: number;
+  agentAddress?: Hex;
+  timestamp: string;
+}
+
 export interface LegalReport {
   riskLevel: RiskLevel;
   score: number;
   x402PaymentTxHash?: string;
   apifyRunId?: string;
-  sources: unknown[];
+  sources: LegalSource[];
   intentSummary: string;
-  codeIntentMismatch: unknown[];
-  regulatoryFindings: unknown[];
-  exploitNewsFindings: unknown[];
+  codeIntentMismatch: IntentMismatch[];
+  regulatoryFindings: LegalFinding[];
+  exploitNewsFindings: LegalFinding[];
   sentimentSummary: string;
+}
+
+export interface LegalSource {
+  title: string;
+  url: string;
+  sourceType: "rekt" | "sec" | "mica" | "news" | "social" | "esma" | "eba" | "swarm";
+  fetchedAt: string;
+  summary: string;
+}
+
+export interface IntentMismatch {
+  claim: string;
+  observedCodeBehavior: string;
+  severity: Severity;
+  line?: number;
+}
+
+export interface LegalFinding {
+  title: string;
+  summary: string;
+  riskLevel: RiskLevel;
+  sourceUrl: string;
 }
 
 export interface SecurityReport {
@@ -79,4 +113,3 @@ export interface RegistryVerificationResult {
   sourcifyUrl?: string;
   error?: string;
 }
-
