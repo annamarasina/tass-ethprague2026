@@ -123,5 +123,5 @@ export interface CertificateResult {
   certificateHash: Hex;
   baseScanUrl: string;
   reportUri: string;
+  sourcifyUrl?: string;
 }
-

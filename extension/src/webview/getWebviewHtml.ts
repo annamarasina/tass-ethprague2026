@@ -376,6 +376,43 @@ export function getWebviewHtml(webview: vscode.Webview, extensionUri: vscode.Uri
       word-break: break-word;
     }
 
+    .certified-panel {
+      display: none;
+      margin-top: 12px;
+      border: 1px solid var(--vscode-panel-border);
+      border-radius: 6px;
+      padding: 10px;
+      background: var(--vscode-sideBar-background);
+    }
+
+    .certified-panel.visible {
+      display: block;
+    }
+
+    .link-row {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      margin-top: 8px;
+    }
+
+    .text-link {
+      border: 0;
+      padding: 0;
+      color: var(--vscode-textLink-foreground);
+      background: transparent;
+      text-align: left;
+      font-size: 12px;
+      line-height: 1.35;
+      cursor: pointer;
+      word-break: break-all;
+    }
+
+    .text-link:hover {
+      color: var(--vscode-textLink-activeForeground);
+      background: transparent;
+    }
+
     .empty {
       color: var(--vscode-descriptionForeground);
     }
@@ -433,6 +470,15 @@ export function getWebviewHtml(webview: vscode.Webview, extensionUri: vscode.Uri
       </div>
       <div id="findingPreview" class="finding-preview"></div>
       <div id="blockedNote" class="blocked-note"></div>
+
+      <div id="certifiedPanel" class="certified-panel">
+        <strong>Certificate Minted</strong>
+        <div id="certificateHash" class="meta-line"></div>
+        <div class="link-row">
+          <button id="baseScanLink" class="text-link" type="button"></button>
+          <button id="sourcifyLink" class="text-link" type="button"></button>
+        </div>
+      </div>
 
       <div class="section">
         <h2 class="section-title">Intent and Legal Risk</h2>

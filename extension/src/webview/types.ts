@@ -1,4 +1,4 @@
-import type { AuditResult } from "../types";
+import type { AuditResult, CertificateResult } from "../types";
 
 export type WebviewState = "idle" | "running" | "report" | "blocked" | "certified" | "error";
 
@@ -15,9 +15,14 @@ export interface WebviewModel {
   logs: WebviewLog[];
   statusMessage?: string;
   auditResult?: AuditResult;
+  certificateResult?: CertificateResult;
 }
 
-export type WebviewToExtensionMessage = { type: "runAudit" } | { type: "jumpToFinding"; findingId: string };
+export type WebviewToExtensionMessage =
+  | { type: "runAudit" }
+  | { type: "jumpToFinding"; findingId: string }
+  | { type: "mintCertificate" }
+  | { type: "openExternal"; url: string };
 
 export type ExtensionToWebviewMessage =
   | { type: "replaceState"; model: WebviewModel }

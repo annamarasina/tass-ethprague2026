@@ -35,9 +35,29 @@ const intentMismatches = document.querySelector<HTMLElement>("#intentMismatches"
 const securityFindings = document.querySelector<HTMLElement>("#securityFindings");
 const storageFindings = document.querySelector<HTMLElement>("#storageFindings");
 const closestMatches = document.querySelector<HTMLElement>("#closestMatches");
+const certifiedPanel = document.querySelector<HTMLElement>("#certifiedPanel");
+const certificateHash = document.querySelector<HTMLElement>("#certificateHash");
+const baseScanLink = document.querySelector<HTMLButtonElement>("#baseScanLink");
+const sourcifyLink = document.querySelector<HTMLButtonElement>("#sourcifyLink");
 
 runButton?.addEventListener("click", () => {
   vscode.postMessage({ type: "runAudit" });
+});
+
+mintCertificate?.addEventListener("click", () => {
+  vscode.postMessage({ type: "mintCertificate" });
+});
+
+baseScanLink?.addEventListener("click", () => {
+  if (model.certificateResult?.baseScanUrl) {
+    vscode.postMessage({ type: "openExternal", url: model.certificateResult.baseScanUrl });
+  }
+});
+
+sourcifyLink?.addEventListener("click", () => {
+  if (model.certificateResult?.sourcifyUrl) {
+    vscode.postMessage({ type: "openExternal", url: model.certificateResult.sourcifyUrl });
+  }
 });
 
 window.addEventListener("message", (event: MessageEvent<ExtensionToWebviewMessage>) => {
@@ -170,7 +190,8 @@ function renderSummary(): void {
 
   if (mintCertificate) {
     mintCertificate.classList.toggle("hidden", !result.certificationEligible);
-    mintCertificate.disabled = !result.certificationEligible;
+    mintCertificate.disabled = !result.certificationEligible || model.state === "certified" || model.state === "running";
+    mintCertificate.textContent = model.state === "certified" ? "Certified" : "Mint Certificate";
   }
 
   if (blockedNote) {
@@ -228,6 +249,33 @@ function renderSummary(): void {
     })),
     "No close matches found.",
   );
+
+  renderCertificate();
+}
+
+function renderCertificate(): void {
+  const certificate = model.certificateResult;
+
+  if (certifiedPanel) {
+    certifiedPanel.classList.toggle("visible", Boolean(certificate));
+  }
+
+  if (!certificate) {
+    return;
+  }
+
+  if (certificateHash) {
+    certificateHash.textContent = `Certificate hash: ${certificate.certificateHash}`;
+  }
+
+  if (baseScanLink) {
+    baseScanLink.textContent = `BaseScan: ${certificate.transactionHash}`;
+  }
+
+  if (sourcifyLink) {
+    sourcifyLink.hidden = !certificate.sourcifyUrl;
+    sourcifyLink.textContent = certificate.sourcifyUrl ? `Sourcify: ${certificate.registryAddress}` : "";
+  }
 }
 
 function replaceList(

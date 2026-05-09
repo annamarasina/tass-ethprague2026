@@ -1,5 +1,6 @@
 import * as vscode from "vscode";
 import { randomUUID } from "node:crypto";
+import { CertificationBlockedError, MockCertificationClient } from "../client/certificationClient";
 import { MockAuditClient } from "../client/mockAuditClient";
 import { RUN_AUDIT_COMMAND } from "../constants";
 import { applyDiagnostics, clearDiagnostics } from "../diagnostics/applyDiagnostics";
@@ -16,6 +17,7 @@ export class PreflightViewProvider implements vscode.WebviewViewProvider {
     logs: [],
   };
   private readonly mockAuditClient = new MockAuditClient();
+  private readonly certificationClient = new MockCertificationClient();
 
   constructor(
     private readonly extensionUri: vscode.Uri,
@@ -39,6 +41,14 @@ export class PreflightViewProvider implements vscode.WebviewViewProvider {
 
         if (message.type === "jumpToFinding") {
           void jumpToFinding(this.model.auditResult, message.findingId);
+        }
+
+        if (message.type === "mintCertificate") {
+          void this.mintCertificate();
+        }
+
+        if (message.type === "openExternal") {
+          void vscode.env.openExternal(vscode.Uri.parse(message.url));
         }
       }),
     );
@@ -151,5 +161,44 @@ export class PreflightViewProvider implements vscode.WebviewViewProvider {
 
   private appendAuditLog(event: AuditLogEvent): void {
     this.appendLog(event.level, event.phase, event.message);
+  }
+
+  private async mintCertificate(): Promise<void> {
+    const auditResult = this.model.auditResult;
+
+    if (!auditResult) {
+      this.appendLog("error", "mint", "Run an audit before minting a certificate.");
+      return;
+    }
+
+    if (!auditResult.certificationEligible) {
+      this.appendLog("error", "mint", "Certification is blocked by critical findings.");
+      return;
+    }
+
+    this.setModel({
+      ...this.model,
+      state: "running",
+      statusMessage: "Minting certificate",
+    });
+
+    try {
+      const certificateResult = await this.certificationClient.issueCertificate(auditResult, (event) => this.appendAuditLog(event));
+      this.setModel({
+        ...this.model,
+        state: "certified",
+        statusMessage: "Certificate minted",
+        certificateResult,
+      });
+    } catch (error) {
+      const message =
+        error instanceof CertificationBlockedError || error instanceof Error ? error.message : "Unknown certificate mint error";
+      this.setModel({
+        ...this.model,
+        state: "error",
+        statusMessage: message,
+      });
+      this.appendLog("error", "mint", message);
+    }
   }
 }
