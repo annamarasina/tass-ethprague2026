@@ -46,7 +46,8 @@
     "compile": "tsc -p .",
     "postcompile": "node ./scripts/copy-webview-assets.mjs",
     "watch": "tsc -watch -p .",
-    "check": "tsc -p . --noEmit"
+    "check": "tsc -p . --noEmit",
+    "demo:check": "npm run compile"
   },
   "devDependencies": {
     "@types/node": "^25.6.2",
