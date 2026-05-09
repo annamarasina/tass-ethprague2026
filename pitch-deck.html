@@ -461,6 +461,41 @@
         color: var(--green);
       }
 
+      .slide.active .big-number {
+        animation: boom 700ms cubic-bezier(0.34, 1.56, 0.64, 1) both;
+      }
+
+      @keyframes boom {
+        0% {
+          opacity: 0;
+          transform: scale(0.3);
+          filter: blur(20px);
+        }
+        70% {
+          transform: scale(1.05);
+        }
+        100% {
+          opacity: 1;
+          transform: scale(1);
+          filter: blur(0);
+        }
+      }
+
+      .fragment {
+        opacity: 0;
+        transform: translateY(20px);
+        max-height: 0;
+        overflow: hidden;
+        transition: all 600ms cubic-bezier(0.23, 1, 0.32, 1);
+      }
+
+      .fragment.visible {
+        opacity: 1;
+        transform: translateY(0);
+        max-height: 200px;
+        margin-top: 20px;
+      }
+
       @media (max-width: 860px) {
         body {
           overflow: auto;
@@ -521,7 +556,7 @@
         <div class="layout center-stack">
           <div class="stack">
             <div class="big-number">$630M</div>
-            <p class="lead">Crypto hack losses reported in April 2026.</p>
+            <p class="lead fragment">Stolen in April 2026 alone.</p>
           </div>
         </div>
       </section>
@@ -529,9 +564,8 @@
       <section class="slide">
         <div class="layout center-stack">
           <div class="stack">
-            <p class="kicker">April 2026</p>
-            <div class="big-number">+280%</div>
-            <p class="lead">April losses were higher than Q1 2026 combined.</p>
+            <div class="big-number">€5M or 12.5% of annual turnover</div>
+            <p class="lead fragment">Maximum MiCA Fine Starting July 2026.</p>
           </div>
         </div>
       </section>
@@ -539,9 +573,8 @@
       <section class="slide">
         <div class="layout center-stack">
           <div class="stack">
-            <p class="kicker">Legal Deadline</p>
-            <div class="big-number">1 July 2026</div>
-            <p class="lead">MiCA transition periods end across the EU.</p>
+            <div class="big-number">7,675+</div>
+            <p class="lead fragment">New software vulnerabilities discovered every single day.</p>
           </div>
         </div>
       </section>
@@ -619,11 +652,17 @@
       const slideNo = document.querySelector("#slideNo");
       let current = 0;
 
+      function getFragments() {
+        return Array.from(slides[current].querySelectorAll(".fragment"));
+      }
+
       function showSlide(index) {
         current = Math.max(0, Math.min(slides.length - 1, index));
         slides.forEach((slide, i) => {
           slide.classList.toggle("active", i === current);
           slide.classList.remove("animate-caption");
+          // Reset fragments when moving to a slide
+          slide.querySelectorAll(".fragment").forEach(f => f.classList.remove("visible"));
         });
         slideNo.textContent = `${current + 1} / ${slides.length}`;
         requestAnimationFrame(() => {
@@ -631,8 +670,45 @@
         });
       }
 
-      document.querySelector("#prev").addEventListener("click", () => showSlide(current - 1));
-      document.querySelector("#next").addEventListener("click", () => showSlide(current + 1));
+      function nextStep() {
+        const fragments = getFragments();
+        const hiddenFragment = fragments.find(f => !f.classList.contains("visible"));
+        
+        if (hiddenFragment) {
+          hiddenFragment.classList.add("visible");
+        } else {
+          showSlide(current + 1);
+        }
+      }
+
+      function prevStep() {
+        const fragments = getFragments();
+        const visibleFragments = fragments.filter(f => f.classList.contains("visible"));
+        
+        if (visibleFragments.length > 0) {
+          visibleFragments[visibleFragments.length - 1].classList.remove("visible");
+        } else {
+          showSlide(current - 1);
+          // When going back, we might want fragments of the previous slide to be visible?
+          // For now, let's keep it simple: resetting them is fine.
+        }
+      }
+
+      document.querySelector("#prev").addEventListener("click", prevStep);
+      document.querySelector("#next").addEventListener("click", nextStep);
+
+      window.addEventListener("keydown", (event) => {
+        if (event.key === "ArrowRight" || event.key === " " || event.key === "Enter") {
+          nextStep();
+        }
+        if (event.key === "ArrowLeft") {
+          prevStep();
+        }
+      });
+    </script>
+  </body>
+</html>
+(current + 1));
 
       window.addEventListener("keydown", (event) => {
         if (event.key === "ArrowRight" || event.key === " ") showSlide(current + 1);
