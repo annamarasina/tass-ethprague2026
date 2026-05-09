@@ -1,7 +1,8 @@
 import * as vscode from "vscode";
 import { randomUUID } from "node:crypto";
+import { AgentClient } from "../client/agentClient";
 import { CertificationBlockedError, MockCertificationClient } from "../client/certificationClient";
-import { MockAuditClient } from "../client/mockAuditClient";
+import { AgentProcessManager } from "../client/processManager";
 import { RUN_AUDIT_COMMAND } from "../constants";
 import { applyDiagnostics, clearDiagnostics } from "../diagnostics/applyDiagnostics";
 import { jumpToFinding } from "../diagnostics/jumpToFinding";
@@ -16,14 +17,19 @@ export class PreflightViewProvider implements vscode.WebviewViewProvider {
     state: "idle",
     logs: [],
   };
-  private readonly mockAuditClient = new MockAuditClient();
+  private readonly processManager: AgentProcessManager;
+  private readonly agentClient: AgentClient;
   private readonly certificationClient = new MockCertificationClient();
 
   constructor(
     private readonly extensionUri: vscode.Uri,
     private readonly outputChannel: vscode.OutputChannel,
     private readonly diagnostics: vscode.DiagnosticCollection,
-  ) {}
+  ) {
+    const workspaceRoot = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath ?? vscode.Uri.joinPath(extensionUri, "..").fsPath;
+    this.processManager = new AgentProcessManager({ workspaceRoot, outputChannel });
+    this.agentClient = new AgentClient(this.processManager);
+  }
 
   resolveWebviewView(webviewView: vscode.WebviewView): void {
     this.view = webviewView;
@@ -58,6 +64,7 @@ export class PreflightViewProvider implements vscode.WebviewViewProvider {
     for (const disposable of this.disposables) {
       disposable.dispose();
     }
+    this.processManager.dispose();
   }
 
   async runAuditFromActiveEditor(): Promise<void> {
@@ -101,7 +108,7 @@ export class PreflightViewProvider implements vscode.WebviewViewProvider {
     });
 
     try {
-      const auditResult = await this.mockAuditClient.runAudit(
+      const auditResult = await this.agentClient.runAudit(
         {
           auditId,
           selectedFilePath: activeFile,

@@ -280,6 +280,9 @@ Acceptance criteria:
 Approval gate:
 - Stop after bridge works locally.
 
+Status:
+- Complete.
+
 ## Phase 8: Demo Hardening and Final Integration
 
 Purpose:
