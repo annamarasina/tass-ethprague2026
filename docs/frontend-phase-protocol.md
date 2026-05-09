@@ -45,7 +45,7 @@ Approval gate:
 - Frontend Developer confirms the plan is acceptable.
 
 Status:
-- In progress.
+- Complete.
 
 ## Phase 1: VS Code Extension Scaffold
 
@@ -77,6 +77,9 @@ Acceptance criteria:
 
 Approval gate:
 - Stop after scaffold compiles.
+
+Status:
+- In progress.
 
 ## Phase 2: Sidebar WebView Shell
 
