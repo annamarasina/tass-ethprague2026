@@ -14,7 +14,7 @@ export class AgentProcessManager implements vscode.Disposable {
   constructor(private readonly options: AgentProcessManagerOptions) {}
 
   isAvailable(): boolean {
-    return existsSync(this.agentEntrypoint);
+    return existsSync(this.agentEntrypoint) || existsSync(this.agentSourceEntrypoint);
   }
 
   start(): ChildProcessWithoutNullStreams {
@@ -22,11 +22,9 @@ export class AgentProcessManager implements vscode.Disposable {
       return this.process;
     }
 
-    if (!this.isAvailable()) {
-      throw new Error(`Agent entrypoint not found: ${this.agentEntrypoint}`);
-    }
+    const command = this.getStartCommand();
 
-    this.process = spawn("node", [this.agentEntrypoint], {
+    this.process = spawn(command.executable, command.args, {
       cwd: this.options.workspaceRoot,
       env: process.env,
       stdio: "pipe",
@@ -53,5 +51,20 @@ export class AgentProcessManager implements vscode.Disposable {
   private get agentEntrypoint(): string {
     return resolve(this.options.workspaceRoot, "agent", "dist", "index.js");
   }
-}
 
+  private get agentSourceEntrypoint(): string {
+    return resolve(this.options.workspaceRoot, "agent", "src", "index.ts");
+  }
+
+  private getStartCommand(): { executable: string; args: string[] } {
+    if (existsSync(this.agentEntrypoint)) {
+      return { executable: "node", args: [this.agentEntrypoint] };
+    }
+
+    if (existsSync(this.agentSourceEntrypoint)) {
+      return { executable: "npx", args: ["tsx", this.agentSourceEntrypoint] };
+    }
+
+    throw new Error(`Agent entrypoint not found: ${this.agentEntrypoint}`);
+  }
+}

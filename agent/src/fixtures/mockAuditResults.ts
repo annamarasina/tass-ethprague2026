@@ -44,8 +44,19 @@ export const blockedMockAuditResult: AuditResult = {
   securityReport: {
     ...baseAuditResult.securityReport,
     score: 35,
-    findings: [{ severity: "critical", title: "Critical proxy storage collision risk" }],
+    findings: [
+      {
+        id: "mock-critical-proxy-collision",
+        severity: "critical",
+        title: "Critical proxy storage collision risk",
+        description: "The mock fixture represents a blocking proxy storage collision.",
+        filePath: "contracts/demo/UnsafeVault.sol",
+        lineStart: 42,
+        lineEnd: 48,
+        evidence: "Mock fixture evidence for adjacent proxy ownership and implementation slots.",
+        recommendation: "Add storage gaps and verify storage layout before certification.",
+      },
+    ],
     llmSecuritySummary: "Mock audit result is blocked from certification.",
   },
 };
-

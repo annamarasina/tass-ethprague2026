@@ -17,6 +17,7 @@ export interface AuditLogEvent {
     | "init"
     | "legal_payment"
     | "legal_scrape"
+    | "swarm_fetch"
     | "legal_analysis"
     | "security_parse"
     | "security_similarity"
@@ -40,7 +41,7 @@ export interface LegalReport {
   sources: Array<{
     title: string;
     url: string;
-    sourceType: "rekt" | "sec" | "mica" | "news" | "social";
+    sourceType: "rekt" | "sec" | "mica" | "news" | "social" | "esma" | "eba" | "swarm";
     fetchedAt: string;
     summary: string;
   }>;

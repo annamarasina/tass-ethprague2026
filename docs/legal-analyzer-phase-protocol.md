@@ -313,6 +313,9 @@ Acceptance criteria:
 Approval gate:
 - Stop after frontend can consume legal analyzer through the agent bridge.
 
+Status:
+- Complete.
+
 ## Approval Format
 
 After each phase, respond with one of:

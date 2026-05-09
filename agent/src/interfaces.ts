@@ -77,7 +77,17 @@ export interface SecurityReport {
   score: number;
   maxSimilarityPercent: number;
   closestMatches: unknown[];
-  findings: Array<{ severity: Severity; title: string }>;
+  findings: Array<{
+    id: string;
+    title: string;
+    severity: Severity;
+    description: string;
+    filePath: string;
+    lineStart: number;
+    lineEnd?: number;
+    evidence: string;
+    recommendation: string;
+  }>;
   storageLayoutFindings: unknown[];
   astSummary: string;
   llmSecuritySummary: string;
