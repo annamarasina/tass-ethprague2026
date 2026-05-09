@@ -12,6 +12,7 @@
     "Other"
   ],
   "activationEvents": [
+    "*",
     "onCommand:preflightAuditor.runAudit",
     "onView:preflightAuditor.sidebar"
   ],
@@ -37,7 +38,8 @@
       "preflightAuditor": [
         {
           "id": "preflightAuditor.sidebar",
-          "name": "Audit"
+          "name": "Audit",
+          "type": "webview"
         }
       ]
     }

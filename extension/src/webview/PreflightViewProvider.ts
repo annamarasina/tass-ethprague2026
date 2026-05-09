@@ -13,6 +13,7 @@ import type { WebviewLog, WebviewModel, WebviewToExtensionMessage } from "./type
 export class PreflightViewProvider implements vscode.WebviewViewProvider {
   private view?: vscode.WebviewView;
   private readonly disposables: vscode.Disposable[] = [];
+  private selectedFileUri?: vscode.Uri;
   private model: WebviewModel = {
     state: "idle",
     logs: [],
@@ -45,6 +46,10 @@ export class PreflightViewProvider implements vscode.WebviewViewProvider {
           void vscode.commands.executeCommand(RUN_AUDIT_COMMAND);
         }
 
+        if (message.type === "selectSolidityFile") {
+          void this.selectSolidityFile();
+        }
+
         if (message.type === "jumpToFinding") {
           void jumpToFinding(this.model.auditResult, message.findingId);
         }
@@ -68,8 +73,8 @@ export class PreflightViewProvider implements vscode.WebviewViewProvider {
   }
 
   async runAuditFromActiveEditor(): Promise<void> {
-    const activeEditor = vscode.window.activeTextEditor;
-    const activeFile = activeEditor?.document.uri.fsPath;
+    const selectedDocument = await this.getSelectedSolidityDocument();
+    const activeFile = selectedDocument?.uri.fsPath;
 
     await vscode.commands.executeCommand("workbench.view.extension.preflightAuditor");
     clearDiagnostics(this.diagnostics);
@@ -85,18 +90,7 @@ export class PreflightViewProvider implements vscode.WebviewViewProvider {
       return;
     }
 
-    if (!activeFile.endsWith(".sol")) {
-      this.setModel({
-        state: "error",
-        selectedFilePath: activeFile,
-        logs: [],
-        statusMessage: "Select a Solidity file before running an audit.",
-      });
-      this.appendLog("error", "init", "Active editor is not a .sol file.");
-      return;
-    }
-
-    const sourceCode = activeEditor.document.getText();
+    const sourceCode = selectedDocument.getText();
     const auditId = `audit-${randomUUID()}`;
 
     this.outputChannel.appendLine(`Starting mock audit for ${activeFile}`);
@@ -168,6 +162,47 @@ export class PreflightViewProvider implements vscode.WebviewViewProvider {
 
   private appendAuditLog(event: AuditLogEvent): void {
     this.appendLog(event.level, event.phase, event.message);
+  }
+
+  private async selectSolidityFile(): Promise<void> {
+    const selected = await vscode.window.showOpenDialog({
+      canSelectFiles: true,
+      canSelectFolders: false,
+      canSelectMany: false,
+      filters: {
+        Solidity: ["sol"],
+      },
+      title: "Select Solidity file to audit",
+    });
+
+    const [uri] = selected ?? [];
+
+    if (!uri) {
+      return;
+    }
+
+    this.selectedFileUri = uri;
+    this.setModel({
+      ...this.model,
+      selectedFilePath: uri.fsPath,
+      statusMessage: "Solidity file selected",
+    });
+    this.appendLog("info", "init", `Selected ${uri.fsPath}`);
+  }
+
+  private async getSelectedSolidityDocument(): Promise<vscode.TextDocument | undefined> {
+    if (this.selectedFileUri) {
+      return vscode.workspace.openTextDocument(this.selectedFileUri);
+    }
+
+    const activeEditor = vscode.window.activeTextEditor;
+
+    if (activeEditor?.document.uri.fsPath.endsWith(".sol")) {
+      this.selectedFileUri = activeEditor.document.uri;
+      return activeEditor.document;
+    }
+
+    return undefined;
   }
 
   private async mintCertificate(): Promise<void> {

@@ -116,6 +116,22 @@ export function getWebviewHtml(webview: vscode.Webview, extensionUri: vscode.Uri
       opacity: 0.6;
     }
 
+    .actions {
+      display: flex;
+      flex: 0 0 auto;
+      gap: 6px;
+      align-items: center;
+    }
+
+    .secondary-button {
+      color: var(--vscode-button-secondaryForeground);
+      background: var(--vscode-button-secondaryBackground);
+    }
+
+    .secondary-button:hover {
+      background: var(--vscode-button-secondaryHoverBackground);
+    }
+
     .log-panel {
       display: flex;
       min-height: 230px;
@@ -425,7 +441,10 @@ export function getWebviewHtml(webview: vscode.Webview, extensionUri: vscode.Uri
         <h1>${EXTENSION_NAME}</h1>
         <div class="subtitle">Autonomous pre-flight smart contract audit</div>
       </div>
-      <button id="runAudit" type="button">Run Audit</button>
+      <div class="actions">
+        <button id="selectFile" class="secondary-button" type="button">Select</button>
+        <button id="runAudit" type="button">Run Audit</button>
+      </div>
     </section>
 
     <section class="status">

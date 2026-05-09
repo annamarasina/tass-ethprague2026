@@ -1,22 +1,92 @@
-import type { ExtensionToWebviewMessage, WebviewModel, WebviewToExtensionMessage } from "./types";
+type WebviewState = "idle" | "running" | "report" | "blocked" | "certified" | "error";
+
+interface WebviewLog {
+  timestamp: string;
+  level: "info" | "warn" | "error" | "success";
+  phase: string;
+  message: string;
+}
+
+interface WebviewModel {
+  state: WebviewState;
+  selectedFilePath?: string;
+  logs: WebviewLog[];
+  statusMessage?: string;
+  auditResult?: {
+    totalScore: number;
+    certificationEligible: boolean;
+    blockingReasons: string[];
+    legalReport: {
+      riskLevel: string;
+      intentSummary: string;
+      codeIntentMismatch: Array<{
+        claim: string;
+        observedCodeBehavior: string;
+        severity: string;
+        line?: number;
+      }>;
+    };
+    securityReport: {
+      maxSimilarityPercent: number;
+      findings: Array<{
+        id: string;
+        title: string;
+        severity: string;
+        description: string;
+        lineStart: number;
+        lineEnd?: number;
+        recommendation: string;
+      }>;
+      storageLayoutFindings: Array<{
+        title: string;
+        severity: string;
+        description: string;
+        affectedSlot?: string;
+        referenceContract?: string;
+      }>;
+      closestMatches: Array<{
+        contractName: string;
+        label: string;
+        similarityPercent: number;
+        source: string;
+        address?: string;
+        metadataUrl?: string;
+      }>;
+    };
+  };
+  certificateResult?: {
+    registryAddress: string;
+    transactionHash: string;
+    certificateHash: string;
+    baseScanUrl: string;
+    sourcifyUrl?: string;
+  };
+}
+
+type WebviewToExtensionMessage =
+  | { type: "runAudit" }
+  | { type: "selectSolidityFile" }
+  | { type: "jumpToFinding"; findingId: string }
+  | { type: "mintCertificate" }
+  | { type: "openExternal"; url: string };
+
+type ExtensionToWebviewMessage =
+  | { type: "replaceState"; model: WebviewModel }
+  | { type: "appendLog"; log: WebviewLog; state?: WebviewState; statusMessage?: string };
 
 declare const acquireVsCodeApi: () => {
   postMessage(message: WebviewToExtensionMessage): void;
 };
 
-declare global {
-  interface Window {
-    __PRE_FLIGHT_MODEL__?: WebviewModel;
-  }
-}
-
 const vscode = acquireVsCodeApi();
-let model: WebviewModel = window.__PRE_FLIGHT_MODEL__ ?? {
+const preflightWindow = window as Window & { __PRE_FLIGHT_MODEL__?: WebviewModel };
+let model: WebviewModel = preflightWindow.__PRE_FLIGHT_MODEL__ ?? {
   state: "idle",
   logs: [],
 };
 
 const runButton = document.querySelector<HTMLButtonElement>("#runAudit");
+const selectFileButton = document.querySelector<HTMLButtonElement>("#selectFile");
 const statusMessage = document.querySelector<HTMLElement>("#statusMessage");
 const statePill = document.querySelector<HTMLElement>("#statePill");
 const selectedFile = document.querySelector<HTMLElement>("#selectedFile");
@@ -42,6 +112,10 @@ const sourcifyLink = document.querySelector<HTMLButtonElement>("#sourcifyLink");
 
 runButton?.addEventListener("click", () => {
   vscode.postMessage({ type: "runAudit" });
+});
+
+selectFileButton?.addEventListener("click", () => {
+  vscode.postMessage({ type: "selectSolidityFile" });
 });
 
 mintCertificate?.addEventListener("click", () => {
@@ -85,6 +159,10 @@ render();
 function render(): void {
   if (runButton) {
     runButton.disabled = model.state === "running";
+  }
+
+  if (selectFileButton) {
+    selectFileButton.disabled = model.state === "running";
   }
 
   if (statusMessage) {
