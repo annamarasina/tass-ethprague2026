@@ -4,28 +4,8 @@ type EmitAuditLog = (event: AuditLogEvent) => void;
 
 export class MockAuditClient {
   async runAudit(input: AuditInput, emit: EmitAuditLog): Promise<AuditResult> {
-    await this.emitPhase(input.auditId, emit, "init", "info", "Reading selected Solidity file");
-    await this.emitPhase(input.auditId, emit, "legal_payment", "info", "Mock x402 payment prepared for Apify actor", {
-      network: "base-sepolia",
-      asset: "USDC",
-    });
-    await this.emitPhase(input.auditId, emit, "legal_scrape", "info", "Fetched recent exploit and regulatory sources");
-    await this.emitPhase(input.auditId, emit, "legal_analysis", "success", "Legal intent risk scored");
-    await this.emitPhase(input.auditId, emit, "security_parse", "info", "Parsed Solidity AST");
-    await this.emitPhase(input.auditId, emit, "security_similarity", "info", "Compared against Sourcify exploit patterns");
-    await this.emitPhase(input.auditId, emit, "security_storage", "warn", "Storage layout review found upgradeability signals");
-    await this.emitPhase(input.auditId, emit, "security_analysis", "success", "Security analysis complete");
-
+    await delay(200);
     const result = this.buildResult(input);
-
-    await this.emitPhase(
-      input.auditId,
-      emit,
-      "report",
-      result.certificationEligible ? "success" : "warn",
-      result.certificationEligible ? "Eligible mock audit report generated" : "Blocked mock audit report generated",
-    );
-
     return result;
   }
 
@@ -134,6 +114,32 @@ export class MockAuditClient {
       },
       certificationEligible: !blocked,
       blockingReasons: blocked ? [criticalFinding.title] : [],
+      complianceSuggestions: [
+        {
+          title: "Reserve transparency reporting required",
+          description: "Under MiCA Article 48, stablecoin issuers must publish monthly reserve composition reports. Add an on-chain attestation mechanism or link to a public reserve proof.",
+          regulation: "MiCA Art. 48",
+          severity: "high",
+        },
+        {
+          title: "Redemption rights must be guaranteed",
+          description: "Token holders must be able to redeem at par value at any time. The burn() function exists but lacks a guarantee that reserves back 1:1 redemption. Consider adding a reserve ratio check.",
+          regulation: "MiCA Art. 49",
+          severity: "high",
+        },
+        {
+          title: "Governance disclosure needed",
+          description: "The owner-only mint function creates a centralization risk. EBA guidelines require clear disclosure of who controls minting and under what conditions.",
+          regulation: "EBA GL/2024/01",
+          severity: "medium",
+        },
+        {
+          title: "Whitepaper obligation",
+          description: "A crypto-asset whitepaper must be published and notified to the competent authority before offering tokens to the public.",
+          regulation: "MiCA Art. 51",
+          severity: "medium",
+        },
+      ],
       createdAt: input.timestamp,
     };
   }

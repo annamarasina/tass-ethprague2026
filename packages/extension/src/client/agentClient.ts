@@ -16,12 +16,7 @@ export class AgentClient {
   constructor(private readonly processManager: AgentProcessManager) {}
 
   async runAudit(input: AuditInput, emit: EmitAuditLog): Promise<AuditResult> {
-    emit(this.localFallbackLog(input.auditId, "[AUDIT] Starting audit client initialization..."));
-    
     if (process.env.PREFLIGHT_AGENT_MODE !== "live") {
-      const msg = "[AGENT] Using mock audit client. Set PREFLIGHT_AGENT_MODE=live to attempt local agent mode.";
-      emit(this.localFallbackLog(input.auditId, msg));
-      emit(this.localFallbackLog(input.auditId, "[MOCK] Initializing mock audit client..."));
       return this.mockAuditClient.runAudit(input, emit);
     }
 

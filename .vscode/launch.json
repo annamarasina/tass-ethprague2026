@@ -11,6 +11,21 @@
       ],
       "outFiles": ["${workspaceFolder}/packages/extension/dist/**/*.js"],
       "preLaunchTask": "Compile VS Code Extension"
+    },
+    {
+      "name": "Run Extension (Remote)",
+      "type": "extensionHost",
+      "request": "launch",
+      "args": [
+        "--extensionDevelopmentPath=${workspaceFolder}/packages/extension",
+        "${workspaceFolder}"
+      ],
+      "debugRenderer": false,
+      "outFiles": ["${workspaceFolder}/packages/extension/dist/**/*.js"],
+      "preLaunchTask": "Compile VS Code Extension",
+      "env": {
+        "VSCODE_EXTHOST_WILL_SEND_SOCKET": null
+      }
     }
   ]
 }

@@ -19,8 +19,8 @@ export interface WebviewModel {
 }
 
 export type WebviewToExtensionMessage =
-  | { type: "runComplianceAudit" }
-  | { type: "runAudit" }
+  | { type: "runComplianceAudit"; sourceCode?: string }
+  | { type: "runAudit"; sourceCode?: string }
   | { type: "jumpToFinding"; findingId: string }
   | { type: "mintCertificate" }
   | { type: "openExternal"; url: string };

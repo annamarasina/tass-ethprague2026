@@ -112,6 +112,12 @@ export interface AuditResult {
   totalScore: number;
   legalReport: LegalReport;
   securityReport: SecurityReport;
+  complianceSuggestions: Array<{
+    title: string;
+    description: string;
+    regulation: string;
+    severity: Severity;
+  }>;
   certificationEligible: boolean;
   blockingReasons: string[];
   createdAt: string;

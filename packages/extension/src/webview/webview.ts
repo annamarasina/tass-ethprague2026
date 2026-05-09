@@ -16,18 +16,13 @@ interface WebviewModel {
     totalScore: number;
     certificationEligible: boolean;
     blockingReasons: string[];
-    legalReport: {
-      riskLevel: string;
-      intentSummary: string;
-      codeIntentMismatch: Array<{
-        claim: string;
-        observedCodeBehavior: string;
-        severity: string;
-        line?: number;
-      }>;
-    };
+    complianceSuggestions?: Array<{
+      title: string;
+      description: string;
+      regulation: string;
+      severity: string;
+    }>;
     securityReport: {
-      maxSimilarityPercent: number;
       findings: Array<{
         id: string;
         title: string;
@@ -36,21 +31,6 @@ interface WebviewModel {
         lineStart: number;
         lineEnd?: number;
         recommendation: string;
-      }>;
-      storageLayoutFindings: Array<{
-        title: string;
-        severity: string;
-        description: string;
-        affectedSlot?: string;
-        referenceContract?: string;
-      }>;
-      closestMatches: Array<{
-        contractName: string;
-        label: string;
-        similarityPercent: number;
-        source: string;
-        address?: string;
-        metadataUrl?: string;
       }>;
     };
   };
@@ -64,8 +44,8 @@ interface WebviewModel {
 }
 
 type WebviewToExtensionMessage =
-  | { type: "runComplianceAudit" }
-  | { type: "runAudit" }
+  | { type: "runComplianceAudit"; sourceCode?: string }
+  | { type: "runAudit"; sourceCode?: string }
   | { type: "jumpToFinding"; findingId: string }
   | { type: "mintCertificate" }
   | { type: "openExternal"; url: string };
@@ -86,27 +66,17 @@ let model: WebviewModel = preflightWindow.__PRE_FLIGHT_MODEL__ ?? {
 };
 
 const runButton = document.querySelector<HTMLButtonElement>("#runAudit");
-const vulnerabilityButton = document.querySelector<HTMLButtonElement>("#runVulnerability");
 const statusMessage = document.querySelector<HTMLElement>("#statusMessage");
 const statePill = document.querySelector<HTMLElement>("#statePill");
 const statusCard = document.querySelector<HTMLElement>("#statusCard");
 const progressBar = document.querySelector<HTMLElement>("#progressBar");
-const selectedFile = document.querySelector<HTMLElement>("#selectedFile");
-const logs = document.querySelector<HTMLElement>("#logs");
-const logCount = document.querySelector<HTMLElement>("#logCount");
+const codeInput = document.querySelector<HTMLTextAreaElement>("#codeInput");
 const summary = document.querySelector<HTMLElement>("#summary");
-const scoreMetric = document.querySelector<HTMLElement>("#scoreMetric");
-const legalMetric = document.querySelector<HTMLElement>("#legalMetric");
-const similarityMetric = document.querySelector<HTMLElement>("#similarityMetric");
-const findingPreview = document.querySelector<HTMLElement>("#findingPreview");
 const reportSubtitle = document.querySelector<HTMLElement>("#reportSubtitle");
 const mintCertificate = document.querySelector<HTMLButtonElement>("#mintCertificate");
 const blockedNote = document.querySelector<HTMLElement>("#blockedNote");
-const intentSummary = document.querySelector<HTMLElement>("#intentSummary");
-const intentMismatches = document.querySelector<HTMLElement>("#intentMismatches");
+const complianceSuggestions = document.querySelector<HTMLElement>("#complianceSuggestions");
 const securityFindings = document.querySelector<HTMLElement>("#securityFindings");
-const storageFindings = document.querySelector<HTMLElement>("#storageFindings");
-const closestMatches = document.querySelector<HTMLElement>("#closestMatches");
 const certifiedPanel = document.querySelector<HTMLElement>("#certifiedPanel");
 const certificateHash = document.querySelector<HTMLElement>("#certificateHash");
 const baseScanLink = document.querySelector<HTMLButtonElement>("#baseScanLink");
@@ -116,12 +86,112 @@ const paymentSubtitle = document.querySelector<HTMLElement>("#paymentSubtitle");
 const approvePayment = document.querySelector<HTMLButtonElement>("#approvePayment");
 const cancelPayment = document.querySelector<HTMLButtonElement>("#cancelPayment");
 
-runButton?.addEventListener("click", () => {
-  showMockPaymentRequest();
+// Compliance carousel elements
+const logsCompliance = document.querySelector<HTMLElement>("#logsCompliance");
+const logPrevCompliance = document.querySelector<HTMLButtonElement>("#logPrevCompliance");
+const logNextCompliance = document.querySelector<HTMLButtonElement>("#logNextCompliance");
+const logIndexCompliance = document.querySelector<HTMLElement>("#logIndexCompliance");
+
+// Security carousel elements
+const logsSecurity = document.querySelector<HTMLElement>("#logsSecurity");
+const logPrevSecurity = document.querySelector<HTMLButtonElement>("#logPrevSecurity");
+const logNextSecurity = document.querySelector<HTMLButtonElement>("#logNextSecurity");
+const logIndexSecurity = document.querySelector<HTMLElement>("#logIndexSecurity");
+
+let complianceLogIndex = 0;
+let securityLogIndex = 0;
+
+const COMPLIANCE_PHASES = new Set(["compliance_classify", "compliance_payment", "compliance_scrape", "compliance_analysis"]);
+const SECURITY_PHASES = new Set(["similarity_search", "similarity_filter", "sourcify_hash", "findings_crawl"]);
+
+function getComplianceLogs(): WebviewLog[] {
+  return model.logs.filter((l) => COMPLIANCE_PHASES.has(l.phase));
+}
+
+function getSecurityLogs(): WebviewLog[] {
+  return model.logs.filter((l) => SECURITY_PHASES.has(l.phase));
+}
+
+// ─── Tab switching ───
+const tabBtns = document.querySelectorAll<HTMLButtonElement>(".tab-btn");
+const tabPanes = document.querySelectorAll<HTMLElement>(".tab-pane");
+
+function switchTab(tabId: string) {
+  tabBtns.forEach((btn) => btn.classList.toggle("active", btn.dataset.tab === tabId));
+  tabPanes.forEach((pane) => pane.classList.toggle("active", pane.id === tabId));
+}
+
+tabBtns.forEach((btn) => {
+  btn.addEventListener("click", () => {
+    const target = btn.dataset.tab;
+    if (target) switchTab(target);
+  });
 });
 
-vulnerabilityButton?.addEventListener("click", () => {
-  vscode.postMessage({ type: "runAudit" });
+// ─── Log carousel navigation ───
+logPrevCompliance?.addEventListener("click", () => {
+  if (complianceLogIndex > 0) {
+    complianceLogIndex--;
+    renderCarousel("compliance");
+  }
+});
+
+logNextCompliance?.addEventListener("click", () => {
+  const items = getComplianceLogs();
+  if (complianceLogIndex < items.length - 1) {
+    complianceLogIndex++;
+    renderCarousel("compliance");
+  }
+});
+
+logPrevSecurity?.addEventListener("click", () => {
+  if (securityLogIndex > 0) {
+    securityLogIndex--;
+    renderCarousel("security");
+  }
+});
+
+logNextSecurity?.addEventListener("click", () => {
+  const items = getSecurityLogs();
+  if (securityLogIndex < items.length - 1) {
+    securityLogIndex++;
+    renderCarousel("security");
+  }
+});
+
+function renderCarousel(section: "compliance" | "security"): void {
+  const container = section === "compliance" ? logsCompliance : logsSecurity;
+  const indexEl = section === "compliance" ? logIndexCompliance : logIndexSecurity;
+  const prevBtn = section === "compliance" ? logPrevCompliance : logPrevSecurity;
+  const nextBtn = section === "compliance" ? logNextCompliance : logNextSecurity;
+  const items = section === "compliance" ? getComplianceLogs() : getSecurityLogs();
+  const idx = section === "compliance" ? complianceLogIndex : securityLogIndex;
+
+  if (!container) return;
+
+  if (items.length === 0) {
+    container.innerHTML = `<div class="empty">${section === "compliance" ? "Compliance steps will appear here." : "Security steps will appear here."}</div>`;
+    if (indexEl) indexEl.textContent = "–";
+    if (prevBtn) prevBtn.disabled = true;
+    if (nextBtn) nextBtn.disabled = true;
+    return;
+  }
+
+  // Clamp
+  const clamped = Math.max(0, Math.min(idx, items.length - 1));
+  if (section === "compliance") complianceLogIndex = clamped;
+  else securityLogIndex = clamped;
+
+  const entry = renderLog(items[clamped]);
+  container.replaceChildren(entry);
+
+  if (indexEl) indexEl.textContent = `${clamped + 1} / ${items.length}`;
+  if (prevBtn) prevBtn.disabled = clamped === 0;
+  if (nextBtn) nextBtn.disabled = clamped === items.length - 1;
+}
+
+runButton?.addEventListener("click", () => {
+  showMockPaymentRequest();
 });
 
 mintCertificate?.addEventListener("click", () => {
@@ -171,13 +241,12 @@ window.addEventListener("message", (event: MessageEvent<ExtensionToWebviewMessag
 render();
 
 function render(): void {
+
   if (runButton) {
     runButton.disabled = model.state === "running" || paymentPanel?.classList.contains("visible") === true;
   }
 
-  if (vulnerabilityButton) {
-    vulnerabilityButton.disabled = model.state === "running" || paymentPanel?.classList.contains("visible") === true;
-  }
+
 
   if (statusMessage) {
     statusMessage.textContent = model.statusMessage ?? defaultStatus(model);
@@ -196,25 +265,13 @@ function render(): void {
     progressBar.classList.toggle("active", model.state === "running");
   }
 
-  if (selectedFile) {
-    selectedFile.textContent = model.selectedFilePath ?? "No active Solidity file selected";
+  if (codeInput) {
+    codeInput.disabled = model.state === "running";
   }
 
-  if (logCount) {
-    logCount.textContent = String(model.logs.length);
-  }
-
-  if (!logs) {
-    return;
-  }
-
-  if (model.logs.length === 0) {
-    logs.innerHTML = `<div class="empty">Run an audit to stream activity here.</div>`;
-    return;
-  }
-
-  logs.replaceChildren(...model.logs.map(renderLog));
-  logs.scrollTop = logs.scrollHeight;
+  // Keep carousels on first entry by default, only advance if still at 0
+  renderCarousel("compliance");
+  renderCarousel("security");
 
   renderSummary();
 }
@@ -263,7 +320,8 @@ function approveMockPayment(): void {
 
   window.setTimeout(() => {
     hideMockPaymentRequest();
-    vscode.postMessage({ type: "runComplianceAudit" });
+    const sourceCode = codeInput?.value.trim() || undefined;
+    vscode.postMessage({ type: "runComplianceAudit", sourceCode });
   }, 700);
 }
 
@@ -289,25 +347,52 @@ function renderLog(log: WebviewModel["logs"][number]): HTMLElement {
 }
 
 function renderComplianceTrace(log: WebviewModel["logs"][number]): HTMLElement | undefined {
+  if (log.phase === "compliance_classify") {
+    return renderTraceKeyValueCard("1/4", "Classifying contract type", [
+      ["Agent action", "Reading Solidity code"],
+      ["Detected", "ERC-20 Stablecoin (fiat-collateralized)"],
+      ["Scraper", "ESMA MiCA Compliance Officer"],
+    ]);
+  }
+
+  if (log.phase === "compliance_payment") {
+    return renderTraceKeyValueCard("2/4", "Paying Apify actor via x402", [
+      ["Network", "Base Sepolia"],
+      ["Amount", "0.001 USDC"],
+      ["Actor", "esma-watchdog"],
+      ["Status", "✓ confirmed"],
+    ], "success");
+  }
+
+  if (log.phase === "compliance_scrape") {
+    return renderTraceKeyValueCard("3/4", "Retrieving legal documents", [
+      ["Source 1", "ESMA MiCA framework"],
+      ["Source 2", "EBA stablecoin guidelines"],
+      ["Documents", "4 fetched (12.3 KB)"],
+    ]);
+  }
+
+  if (log.phase === "compliance_analysis") {
+    return renderTraceKeyValueCard("4/4", "LLM compliance analysis", [
+      ["Input 1", "Solidity source code"],
+      ["Input 2", "MiCA Article 48 (reserves)"],
+      ["Input 3", "EBA governance guidelines"],
+      ["Status", "Generating suggestions..."],
+    ], "success");
+  }
+
   if (log.phase === "similarity_search") {
-    return renderTraceCard("1/5", "Similarity search", "Embedding cache loaded and ranked against the vulnerability dataset.", [
+    return renderTraceCard("1/4", "Vulnerability similarity search", "Embedding cache loaded and ranked against the vulnerability dataset.", [
       ["1", "10", "0.9141", "██████████████████"],
       ["2", "4", "0.7409", "██████████████"],
       ["3", "9", "0.7222", "██████████████"],
       ["4", "5", "0.7120", "██████████████"],
       ["5", "0", "0.7021", "██████████████"],
-      ["6", "2", "0.6982", "█████████████"],
-      ["7", "6", "0.6450", "████████████"],
-      ["8", "1", "0.6411", "████████████"],
-      ["9", "11", "0.6333", "████████████"],
-      ["10", "7", "0.6330", "████████████"],
-      ["11", "3", "0.6176", "████████████"],
-      ["12", "8", "0.6095", "████████████"],
     ]);
   }
 
   if (log.phase === "similarity_filter") {
-    return renderTraceKeyValueCard("2/5", "Filter similarity > 0.90", [
+    return renderTraceKeyValueCard("2/4", "Filter similarity > 0.90", [
       ["Selected row", "10"],
       ["Score", "0.9141"],
       ["Status", "Passed threshold"],
@@ -315,33 +400,18 @@ function renderComplianceTrace(log: WebviewModel["logs"][number]): HTMLElement |
   }
 
   if (log.phase === "sourcify_hash") {
-    return renderTraceKeyValueCard("3/5", "Sourcify source_hash + BigQuery", [
-      ["Mode", "MOCK"],
+    return renderTraceKeyValueCard("3/4", "Sourcify source_hash + BigQuery", [
       ["Row", "10"],
       ["Score", "0.9141"],
-      ["Source hash", "0x02409faad32169a9ae3a2477a0f094573eb2a256cf1e211269654edf653bc654"],
+      ["Source hash", "0x02409faa...653bc654"],
     ]);
   }
 
   if (log.phase === "findings_crawl") {
-    return renderTraceKeyValueCard("4/5", "Known findings crawl", [
-      ["Mode", "MOCK"],
-      ["Focus row", "11"],
-      ["Issue", "Value of token1OutBase might became stale in TRIBERagequit.sol #126"],
-      ["URL", "https://github.com/code-423n4/2021-11-fei-findings/issues/126"],
+    return renderTraceKeyValueCard("4/4", "Known findings crawl", [
+      ["Issue", "token1OutBase stale in TRIBERagequit.sol"],
+      ["Reference", "code-423n4/2021-11-fei #126"],
     ], "warn");
-  }
-
-  if (log.phase === "compliance_output") {
-    const row = document.createElement("div");
-    row.className = "trace-card";
-    row.append(renderTraceHeading("5/5", "Compliance output"));
-
-    const output = document.createElement("p");
-    output.className = "trace-output";
-    output.textContent = "The USER contract, a simple implementation of a fiat-collateralized stablecoin, allows the owner to mint tokens and users to burn them. The REFERENCE findings highlight a vulnerability in the TRIBE/FEI ragequit contract where a state variable (token1OutBase) can become stale, leading to incorrect calculations during user interactions. This analysis will assess whether the USER contract exhibits a similar class of vulnerability and provide recommendations for improvement.";
-    row.append(output);
-    return row;
   }
 
   return undefined;
@@ -453,28 +523,9 @@ function renderSummary(): void {
   }
 
   const result = model.auditResult;
-  summary.classList.toggle("visible", Boolean(result));
 
   if (!result) {
     return;
-  }
-
-  if (scoreMetric) {
-    scoreMetric.textContent = String(result.totalScore);
-  }
-
-  if (legalMetric) {
-    legalMetric.textContent = result.legalReport.riskLevel;
-  }
-
-  if (similarityMetric) {
-    similarityMetric.textContent = `${result.securityReport.maxSimilarityPercent}%`;
-  }
-
-  if (findingPreview) {
-    const findingCount = result.securityReport.findings.length;
-    const blocking = result.blockingReasons.length > 0 ? ` Blocking: ${result.blockingReasons.join(", ")}` : "";
-    findingPreview.textContent = `${findingCount} finding${findingCount === 1 ? "" : "s"}.${blocking}`;
   }
 
   if (reportSubtitle) {
@@ -494,19 +545,15 @@ function renderSummary(): void {
       : "";
   }
 
-  if (intentSummary) {
-    intentSummary.textContent = result.legalReport.intentSummary;
-  }
-
   replaceList(
-    intentMismatches,
-    result.legalReport.codeIntentMismatch.map((mismatch) => ({
-      title: mismatch.claim,
-      tag: mismatch.severity,
-      body: mismatch.observedCodeBehavior,
-      meta: mismatch.line ? `line ${mismatch.line}` : undefined,
+    complianceSuggestions,
+    (result.complianceSuggestions ?? []).map((s, i) => ({
+      title: `${i + 1}. ${s.title}`,
+      tag: s.severity,
+      body: s.description,
+      meta: s.regulation,
     })),
-    "No intent mismatches found.",
+    "No compliance issues found.",
   );
 
   replaceList(
@@ -518,29 +565,7 @@ function renderSummary(): void {
       body: finding.description,
       meta: `line ${finding.lineStart}${finding.lineEnd ? `-${finding.lineEnd}` : ""} | ${finding.recommendation}`,
     })),
-    "No security findings found.",
-  );
-
-  replaceList(
-    storageFindings,
-    result.securityReport.storageLayoutFindings.map((finding) => ({
-      title: finding.title,
-      tag: finding.severity,
-      body: finding.description,
-      meta: [finding.affectedSlot ? `slot ${finding.affectedSlot}` : undefined, finding.referenceContract].filter(Boolean).join(" | "),
-    })),
-    "No storage layout findings found.",
-  );
-
-  replaceList(
-    closestMatches,
-    result.securityReport.closestMatches.map((match) => ({
-      title: match.contractName,
-      tag: match.label,
-      body: `${match.similarityPercent}% similarity via ${match.source}`,
-      meta: [match.address, match.metadataUrl].filter(Boolean).join(" | "),
-    })),
-    "No close matches found.",
+    "No vulnerability findings.",
   );
 
   renderCertificate();

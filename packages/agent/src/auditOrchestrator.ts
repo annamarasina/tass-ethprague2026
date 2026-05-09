@@ -30,6 +30,7 @@ export async function runAudit(input: AuditInput, emit: EmitLog): Promise<AuditR
     totalScore,
     legalReport,
     securityReport,
+    complianceSuggestions: [],
     certificationEligible: blockingReasons.length === 0,
     blockingReasons,
     createdAt: new Date().toISOString(),
