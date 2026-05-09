@@ -16,7 +16,7 @@ export interface LegalKnowledgeProviderOptions {
   maxRecords?: number;
 }
 
-interface KnowledgeBaseRecord {
+export interface KnowledgeBaseRecord {
   source?: string;
   type?: string;
   title?: string;
@@ -42,11 +42,7 @@ export class LegalKnowledgeProvider {
     }
 
     const parsed = JSON.parse(readFileSync(this.knowledgeBasePath, "utf8")) as KnowledgeBaseRecord[];
-    const legalRecords = parsed
-      .filter(isLegalRecord)
-      .map(normalizeLegalRecord)
-      .filter((record): record is LegalKnowledgeRecord => Boolean(record))
-      .slice(0, this.maxRecords);
+    const legalRecords = normalizeLegalKnowledgeRecords(parsed, this.maxRecords);
 
     return legalRecords.length > 0 ? legalRecords : fallbackLegalKnowledge();
   }
@@ -60,6 +56,17 @@ export class LegalKnowledgeProvider {
       summary: record.summary,
     }));
   }
+}
+
+export function normalizeLegalKnowledgeRecords(
+  records: KnowledgeBaseRecord[],
+  maxRecords = DEFAULT_MAX_RECORDS,
+): LegalKnowledgeRecord[] {
+  return records
+    .filter(isLegalRecord)
+    .map(normalizeLegalRecord)
+    .filter((record): record is LegalKnowledgeRecord => Boolean(record))
+    .slice(0, maxRecords);
 }
 
 function isLegalRecord(record: KnowledgeBaseRecord): boolean {
@@ -117,7 +124,7 @@ function summarizeRecord(record: KnowledgeBaseRecord): string {
   return `${source}${capped}`;
 }
 
-function fallbackLegalKnowledge(): LegalKnowledgeRecord[] {
+export function fallbackLegalKnowledge(): LegalKnowledgeRecord[] {
   return [
     {
       source: "mica",
@@ -129,4 +136,3 @@ function fallbackLegalKnowledge(): LegalKnowledgeRecord[] {
     },
   ];
 }
-

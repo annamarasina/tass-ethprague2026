@@ -187,7 +187,7 @@ Approval gate:
 - Stop after provider returns normalized legal knowledge.
 
 Status:
-- In progress.
+- Complete.
 
 ## Phase 4: Swarm Verified Knowledge Fetch
 
@@ -214,6 +214,9 @@ Acceptance criteria:
 
 Approval gate:
 - Stop after verified fetch/fallback works.
+
+Status:
+- Complete.
 
 ## Phase 5: LLM Legal Collision Analyzer
 

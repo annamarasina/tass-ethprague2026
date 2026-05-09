@@ -1,10 +1,10 @@
 import type { AuditInput, AuditLogEvent, EmitLog, LegalReport } from "../../interfaces";
 import type { LegalAnalyzer } from "./LegalAnalyzer";
 import { summarizeCodeIntent } from "./codeIntentSummarizer";
-import { LegalKnowledgeProvider } from "./legalKnowledgeProvider";
+import { SwarmKnowledgeProvider } from "./swarmKnowledgeProvider";
 
 export class MockLegalAnalyzer implements LegalAnalyzer {
-  private readonly knowledgeProvider = new LegalKnowledgeProvider();
+  private readonly knowledgeProvider = new SwarmKnowledgeProvider();
 
   async run(input: AuditInput, emit: EmitLog): Promise<LegalReport> {
     emit(event(input.auditId, "legal_analysis", "info", "Summarizing user contract intent"));
@@ -16,9 +16,22 @@ export class MockLegalAnalyzer implements LegalAnalyzer {
       ["no admin", "no owner", "fully decentralized", "trustless"].includes(claim),
     );
 
-    emit(event(input.auditId, "legal_scrape", "info", "Loading mock MiCA and ESMA legal knowledge"));
+    emit(event(input.auditId, "legal_scrape", "info", "Loading MiCA and ESMA legal knowledge"));
     await delay(250);
-    const legalKnowledge = this.knowledgeProvider.loadLegalKnowledge();
+    const knowledgeResult = await this.knowledgeProvider.loadLegalKnowledge();
+    if (knowledgeResult.source === "swarm") {
+      emit(event(input.auditId, "swarm_fetch", "success", "Verified legal knowledge loaded from Swarm", {
+        swarmHash: knowledgeResult.swarmHash,
+        gatewayUrl: knowledgeResult.gatewayUrl,
+        records: knowledgeResult.records.length,
+      }));
+    } else {
+      emit(event(input.auditId, "swarm_fetch", "warn", "Using local legal knowledge fallback", {
+        reason: knowledgeResult.warning,
+        records: knowledgeResult.records.length,
+      }));
+    }
+    const legalKnowledge = knowledgeResult.records;
     const legalSources = this.knowledgeProvider.toLegalSources(legalKnowledge);
 
     emit(event(input.auditId, "legal_analysis", "info", "Comparing stated intent against code behavior"));

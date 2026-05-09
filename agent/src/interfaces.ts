@@ -9,6 +9,7 @@ export interface AuditLogEvent {
     | "init"
     | "legal_payment"
     | "legal_scrape"
+    | "swarm_fetch"
     | "legal_analysis"
     | "security_parse"
     | "security_similarity"
