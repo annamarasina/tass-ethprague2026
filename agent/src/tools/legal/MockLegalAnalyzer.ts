@@ -1,11 +1,12 @@
 import type { AuditInput, AuditLogEvent, EmitLog, LegalReport } from "../../interfaces";
 import type { LegalAnalyzer } from "./LegalAnalyzer";
+import { ApifyX402LegalProvider } from "./apifyX402LegalProvider";
 import { summarizeCodeIntent } from "./codeIntentSummarizer";
 import { LegalCollisionAnalyzer } from "./legalCollisionAnalyzer";
-import { SwarmKnowledgeProvider } from "./swarmKnowledgeProvider";
+import { buildSourceExcerpt } from "./prompts";
 
 export class MockLegalAnalyzer implements LegalAnalyzer {
-  private readonly knowledgeProvider = new SwarmKnowledgeProvider();
+  private readonly knowledgeProvider = new ApifyX402LegalProvider();
   private readonly collisionAnalyzer = new LegalCollisionAnalyzer();
 
   async run(input: AuditInput, emit: EmitLog): Promise<LegalReport> {
@@ -16,11 +17,21 @@ export class MockLegalAnalyzer implements LegalAnalyzer {
 
     emit(event(input.auditId, "legal_scrape", "info", "Loading MiCA and ESMA legal knowledge"));
     await delay(250);
-    const knowledgeResult = await this.knowledgeProvider.loadLegalKnowledge();
-    if (knowledgeResult.source === "swarm") {
+    const knowledgeResult = await this.knowledgeProvider.loadLegalKnowledge(
+      {
+        auditId: input.auditId,
+        intent,
+        sourceExcerpt: buildSourceExcerpt(input.sourceCode, 2_000),
+      },
+      emit,
+    );
+    if (knowledgeResult.source === "apify") {
+      emit(event(input.auditId, "legal_scrape", "success", "Apify legal actor returned legal knowledge", {
+        apifyRunId: knowledgeResult.apifyRunId,
+        records: knowledgeResult.records.length,
+      }));
+    } else if (knowledgeResult.fallbackSource === "swarm") {
       emit(event(input.auditId, "swarm_fetch", "success", "Verified legal knowledge loaded from Swarm", {
-        swarmHash: knowledgeResult.swarmHash,
-        gatewayUrl: knowledgeResult.gatewayUrl,
         records: knowledgeResult.records.length,
       }));
     } else {
@@ -43,8 +54,8 @@ export class MockLegalAnalyzer implements LegalAnalyzer {
       legalSources,
       readmeText: input.readmeText,
       commentsText: input.commentsText,
-      x402PaymentTxHash: mockHash(`${input.auditId}:x402`),
-      apifyRunId: `mock-apify-${input.auditId}`,
+      x402PaymentTxHash: knowledgeResult.x402PaymentTxHash,
+      apifyRunId: knowledgeResult.apifyRunId,
     });
 
     emit(event(input.auditId, "legal_analysis", "success", "Legal collision analyzer produced LegalReport", {
@@ -72,18 +83,6 @@ function event(
     message,
     data,
   };
-}
-
-function mockHash(seed: string): `0x${string}` {
-  let hash = 0x811c9dc5;
-
-  for (let index = 0; index < seed.length; index += 1) {
-    hash ^= seed.charCodeAt(index);
-    hash = Math.imul(hash, 0x01000193);
-  }
-
-  const chunk = (hash >>> 0).toString(16).padStart(8, "0");
-  return `0x${chunk.repeat(8)}`;
 }
 
 function delay(ms: number): Promise<void> {

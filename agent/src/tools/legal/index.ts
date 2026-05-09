@@ -1,5 +1,11 @@
 export type { LegalAnalyzer } from "./LegalAnalyzer";
 export { MockLegalAnalyzer } from "./MockLegalAnalyzer";
+export { ApifyX402LegalProvider } from "./apifyX402LegalProvider";
+export type {
+  ApifyX402LegalProviderInput,
+  ApifyX402LegalProviderOptions,
+  ApifyX402LegalResult,
+} from "./apifyX402LegalProvider";
 export { summarizeCodeIntent } from "./codeIntentSummarizer";
 export type { CodeIntentSummary } from "./codeIntentSummarizer";
 export { LegalCollisionAnalyzer } from "./legalCollisionAnalyzer";

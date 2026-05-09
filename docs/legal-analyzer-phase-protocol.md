@@ -282,6 +282,9 @@ Acceptance criteria:
 Approval gate:
 - Stop after Apify adapter works or has clear fallback.
 
+Status:
+- Complete.
+
 ## Phase 7: Orchestrator Integration
 
 Purpose:
