@@ -1,0 +1,129 @@
+import type { AuditInput, AuditLogEvent, EmitLog, LegalReport } from "../../interfaces";
+import type { LegalAnalyzer } from "./LegalAnalyzer";
+
+export class MockLegalAnalyzer implements LegalAnalyzer {
+  async run(input: AuditInput, emit: EmitLog): Promise<LegalReport> {
+    emit(event(input.auditId, "legal_analysis", "info", "Summarizing user contract intent"));
+    await delay(250);
+
+    const hasAdmin = /\bonlyOwner\b|\bowner\b|\badmin\b/i.test(input.sourceCode);
+    const claimsNoAdmin = /no\s+admin|no\s+owner|fully\s+decentralized|trustless/i.test(
+      `${input.readmeText ?? ""}\n${input.commentsText ?? ""}\n${input.sourceCode}`,
+    );
+
+    emit(event(input.auditId, "legal_scrape", "info", "Loading mock MiCA and ESMA legal knowledge"));
+    await delay(250);
+
+    emit(event(input.auditId, "legal_analysis", "info", "Comparing stated intent against code behavior"));
+    await delay(250);
+
+    const mismatch = hasAdmin && claimsNoAdmin;
+
+    const report: LegalReport = {
+      riskLevel: mismatch ? "medium" : "low",
+      score: mismatch ? 72 : 91,
+      x402PaymentTxHash: mockHash(`${input.auditId}:x402`),
+      apifyRunId: `mock-apify-${input.auditId}`,
+      sources: [
+        {
+          title: "Markets in Crypto-Assets Regulation (MiCA)",
+          url: "https://www.esma.europa.eu/esmas-activities/digital-finance-and-innovation/markets-crypto-assets-regulation-mica",
+          sourceType: "mica",
+          fetchedAt: input.timestamp,
+          summary: "Mock MiCA source used to evaluate whether the contract intent creates asset, custody, or issuer risk.",
+        },
+        {
+          title: "ESMA crypto-assets updates",
+          url: "https://www.esma.europa.eu/press-news/esma-news",
+          sourceType: "esma",
+          fetchedAt: input.timestamp,
+          summary: "Mock ESMA source used as cached regulatory context for the legal analyzer.",
+        },
+      ],
+      intentSummary: summarizeIntent(input.sourceCode, hasAdmin),
+      codeIntentMismatch: mismatch
+        ? [
+            {
+              claim: "No admin or fully decentralized control",
+              observedCodeBehavior: "The contract appears to expose owner/admin-controlled behavior.",
+              severity: "medium",
+              line: findFirstLine(input.sourceCode, /\bonlyOwner\b|\bowner\b|\badmin\b/i),
+            },
+          ]
+        : [],
+      regulatoryFindings: [
+        {
+          title: "Regulatory classification requires product-level review",
+          summary:
+            "The mock analyzer found no automatic MiCA blocker, but user-facing claims should stay aligned with actual admin and custody behavior.",
+          riskLevel: mismatch ? "medium" : "low",
+          sourceUrl:
+            "https://www.esma.europa.eu/esmas-activities/digital-finance-and-innovation/markets-crypto-assets-regulation-mica",
+        },
+      ],
+      exploitNewsFindings: [],
+      sentimentSummary: "Mock legal sentiment is stable; the primary issue is consistency between stated intent and contract controls.",
+    };
+
+    emit(event(input.auditId, "legal_analysis", "success", "Mock legal analyzer produced LegalReport", {
+      riskLevel: report.riskLevel,
+      score: report.score,
+      mismatches: report.codeIntentMismatch.length,
+    }));
+
+    return report;
+  }
+}
+
+function summarizeIntent(sourceCode: string, hasAdmin: boolean): string {
+  const contractNames = [...sourceCode.matchAll(/\bcontract\s+([A-Za-z_][A-Za-z0-9_]*)/g)].map((match) => match[1]);
+  const primaryName = contractNames[0] ?? "Selected contract";
+  const custodyHint = /\bdeposit\b|\bwithdraw\b|\btransfer\b|\bpayable\b/i.test(sourceCode)
+    ? "appears to handle user funds or token movement"
+    : "does not obviously custody user funds";
+  const adminHint = hasAdmin ? "includes owner/admin-style controls" : "does not expose obvious owner/admin keywords";
+
+  return `${primaryName} ${custodyHint} and ${adminHint}.`;
+}
+
+function findFirstLine(sourceCode: string, pattern: RegExp): number | undefined {
+  const lines = sourceCode.split(/\r?\n/);
+  const index = lines.findIndex((line) => pattern.test(line));
+  return index >= 0 ? index + 1 : undefined;
+}
+
+function event(
+  auditId: string,
+  phase: AuditLogEvent["phase"],
+  level: AuditLogEvent["level"],
+  message: string,
+  data?: Record<string, unknown>,
+): AuditLogEvent {
+  return {
+    auditId,
+    timestamp: new Date().toISOString(),
+    phase,
+    level,
+    message,
+    data,
+  };
+}
+
+function mockHash(seed: string): `0x${string}` {
+  let hash = 0x811c9dc5;
+
+  for (let index = 0; index < seed.length; index += 1) {
+    hash ^= seed.charCodeAt(index);
+    hash = Math.imul(hash, 0x01000193);
+  }
+
+  const chunk = (hash >>> 0).toString(16).padStart(8, "0");
+  return `0x${chunk.repeat(8)}`;
+}
+
+function delay(ms: number): Promise<void> {
+  return new Promise((resolve) => {
+    setTimeout(resolve, ms);
+  });
+}
+
