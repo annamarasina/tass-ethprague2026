@@ -4,6 +4,7 @@ const crawler = new CheerioCrawler({
     async requestHandler({ $, request, log }) {
         log.info(`Agent scanning: ${request.url}`);
 
+        
         let foundCount = 0;
 
         $('a').each((index, element) => {
