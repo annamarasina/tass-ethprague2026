@@ -1,0 +1,42 @@
+{
+  "name": "swarm-verified-fetch",
+  "version": "1.0.0",
+  "description": "Fetch and verify data from any Swarm gateway — without running a full node",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "clean": "rm -rf dist"
+  },
+  "keywords": [
+    "swarm",
+    "verified-fetch",
+    "decentralized",
+    "gateway",
+    "trustless",
+    "bmt",
+    "content-addressed"
+  ],
+  "license": "MIT",
+  "dependencies": {
+    "js-sha3": "^0.9.3"
+  },
+  "devDependencies": {
+    "@noble/secp256k1": "^3.1.0",
+    "typescript": "^5.4.0",
+    "vitest": "^1.6.0"
+  }
+}
