@@ -529,7 +529,7 @@
         text-align: center;
       }
 
-      .swarm-logo {
+      .bounty-logo {
         height: clamp(56px, 7vw, 92px);
         object-fit: contain;
         position: absolute;
@@ -589,6 +589,16 @@
       }
 
       .swarm-column:first-child li::before {
+        background: var(--gold);
+        box-shadow: 0 0 22px rgba(255, 139, 124, 0.38);
+      }
+
+      .apify-column li::before {
+        background: var(--cyan);
+        box-shadow: 0 0 22px rgba(125, 162, 255, 0.42);
+      }
+
+      .apify-column:first-child li::before {
         background: var(--gold);
         box-shadow: 0 0 22px rgba(255, 139, 124, 0.38);
       }
@@ -1084,7 +1094,38 @@
       </section>
 
       <section class="slide">
-        <img class="swarm-logo" src="assets/swarm-logo.png" alt="Swarm logo" />
+        <img class="bounty-logo" src="assets/apify-logo.svg" alt="Apify logo" />
+        <div class="layout center-stack">
+          <div class="stack">
+            <p class="kicker swarm-heading">Apify Intelligence</p>
+            <h2 class="swarm-heading">Live compliance data.</h2>
+            <p class="swarm-kicker">Automated regulatory scraping for AI smart contract audits.</p>
+            <div class="swarm-columns-wrap">
+              <div class="swarm-column apify-column">
+                <h3>Why</h3>
+                <ul>
+                  <li>Compliance data is spread across many live regulatory sources.</li>
+                  <li>Smart contract audits need fresh, sector-specific legal intelligence.</li>
+                  <li>Manual ESMA, EBA, MiCA, and framework collection is slow and fragmented.</li>
+                  <li>We needed automated, real-time regulatory data collection.</li>
+                </ul>
+              </div>
+              <div class="swarm-divider"></div>
+              <div class="swarm-column apify-column">
+                <h3>How</h3>
+                <ul>
+                  <li>Dynamically orchestrated specialized Apify Actors through our backend.</li>
+                  <li>Triggered Actors based on smart contract sector and context.</li>
+                  <li>Scraped live regulatory and compliance sources.</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="slide">
+        <img class="bounty-logo" src="assets/swarm-logo.png" alt="Swarm logo" />
         <div class="layout center-stack">
           <div class="stack">
             <p class="kicker swarm-heading">Swarm Verified Fetch</p>
@@ -1143,7 +1184,7 @@
         <span></span>
         <div class="nav" aria-label="slide navigation">
           <button type="button" id="prev" aria-label="Previous slide">‹</button>
-          <span class="slide-no" id="slideNo">1 / 8</span>
+          <span class="slide-no" id="slideNo">1 / 9</span>
           <button type="button" id="next" aria-label="Next slide">›</button>
         </div>
       </div>
