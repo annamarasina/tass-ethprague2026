@@ -489,24 +489,31 @@
 
       .problem-list {
         display: grid;
-        gap: 18px;
-        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 30px;
         list-style: none;
-        margin: 6px auto 0;
-        max-width: 980px;
+        margin: 0 auto;
+        max-width: 920px;
         padding: 0;
         text-align: left;
       }
 
       .problem-list li {
-        border: 1px solid var(--line);
-        border-radius: 8px;
-        background: rgba(17, 21, 45, 0.76);
+        align-items: start;
         color: #dce3ff;
+        display: grid;
+        gap: 14px;
+        grid-template-columns: 18px minmax(0, 1fr);
         font-size: clamp(19px, 2vw, 26px);
         line-height: 1.25;
-        min-height: 132px;
-        padding: 22px 24px;
+      }
+
+      .problem-list li::before {
+        background: var(--gold);
+        border-radius: 999px;
+        content: "";
+        height: 10px;
+        margin-top: 0.42em;
+        width: 10px;
       }
 
       .problem-title {
@@ -891,10 +898,9 @@
           <div class="stack">
             <p class="kicker problem-title">Problem</p>
             <ul class="problem-list">
-              <li>Crypto teams are still losing hundreds of millions to preventable exploits.</li>
-              <li>Losing hundreds of millions of dollars.</li>
-              <li>Legal risk is disconnected from what the Solidity code actually does.</li>
-              <li>Users lack trust before a protocol proves it is safe to use.</li>
+              <li>Late audits lead to costly exploits.</li>
+              <li>Rapidly changing compliance rules.</li>
+              <li>Lack of trust in the ecosystem.</li>
             </ul>
           </div>
         </div>
