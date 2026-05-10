@@ -1,11 +1,11 @@
-# Pre-Flight Auditor VS Code Extension
+# Solid Scan VS Code Extension
 
-Frontend MVP for the Pre-Flight Auditor hackathon demo.
+Frontend MVP for the Solid Scan hackathon demo.
 
 ## What Works
 
-- Command Palette command: `Pre-Flight Auditor: Run Audit`
-- Activity bar sidebar: `Pre-Flight Auditor`
+- Command Palette command: `Solid Scan: Run Audit`
+- Activity bar sidebar: `Solid Scan`
 - WebView dashboard with live audit logs
 - Mock audit flow with eligible and blocked results
 - Report UI with score, legal risk, similarity, findings, storage layout, and Sourcify matches
@@ -38,7 +38,7 @@ Suggested demo files:
 Open one of those `.sol` files, then run:
 
 ```text
-Pre-Flight Auditor: Run Audit
+Solid Scan: Run Audit
 ```
 
 ## Mock vs Agent Mode
@@ -83,7 +83,7 @@ The frontend does not directly manage wallet secrets. The local agent/backend ow
 
 1. Compile the extension.
 2. Open `SafeVault.sol`.
-3. Run `Pre-Flight Auditor: Run Audit`.
+3. Run `Solid Scan: Run Audit`.
 4. Verify live logs stream into the sidebar.
 5. Verify report shows eligible state.
 6. Click `Mint Certificate`.
@@ -92,4 +92,3 @@ The frontend does not directly manage wallet secrets. The local agent/backend ow
 9. Run audit again.
 10. Verify critical finding blocks minting.
 11. Click a security finding and confirm VS Code jumps to the source line.
-

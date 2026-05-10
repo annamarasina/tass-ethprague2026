@@ -10,8 +10,10 @@ export async function runAudit(input: AuditInput, emit: EmitLog): Promise<AuditR
     selectedFilePath: input.selectedFilePath,
   }));
 
-  const legalReport = await legalAnalyzer.run(input, emit);
-  const securityReport = (await runPythonVulnerabilityAnalysis(input, emit)) ?? (await runMockSecurityAnalysis(input, emit));
+  const [legalReport, securityReport] = await Promise.all([
+    legalAnalyzer.run(input, emit),
+    runSecurityAnalysis(input, emit),
+  ]);
   const blockingReasons = collectBlockingReasons(legalReport.codeIntentMismatch, securityReport);
   const totalScore = Math.round(legalReport.score * 0.38 + securityReport.score * 0.62);
   const reportSeed = JSON.stringify({
@@ -44,6 +46,10 @@ export async function runAudit(input: AuditInput, emit: EmitLog): Promise<AuditR
   }));
 
   return auditResult;
+}
+
+async function runSecurityAnalysis(input: AuditInput, emit: EmitLog): Promise<SecurityReport> {
+  return (await runPythonVulnerabilityAnalysis(input, emit)) ?? (await runMockSecurityAnalysis(input, emit));
 }
 
 function toComplianceSuggestions(legalReport: AuditResult["legalReport"]): AuditResult["complianceSuggestions"] {

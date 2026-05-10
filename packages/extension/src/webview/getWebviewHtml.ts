@@ -1302,7 +1302,7 @@ export function getWebviewHtml(webview: vscode.Webview, extensionUri: vscode.Uri
         <section id="summary" class="summary visible">
           <div class="summary-header">
             <div class="summary-title">
-              <strong>Pre-Flight Report</strong>
+              <strong>Solid Scan Report</strong>
               <div id="reportSubtitle" class="summary-subtitle">Analysis result</div>
             </div>
             <button id="mintCertificate" class="action-button btn-success hidden" type="button">&#10003; Mint Certificate</button>
@@ -1348,7 +1348,7 @@ export function getWebviewHtml(webview: vscode.Webview, extensionUri: vscode.Uri
   </main>
 
   <script nonce="${nonce}">
-    window.__PRE_FLIGHT_MODEL__ = ${modelJson};
+    window.__SOLID_SCAN_MODEL__ = ${modelJson};
   </script>
   <script nonce="${nonce}" src="${scriptUri}"></script>
 </body>

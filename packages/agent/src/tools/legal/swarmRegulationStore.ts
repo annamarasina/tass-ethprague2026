@@ -15,6 +15,7 @@ import type { KnowledgeBaseRecord } from "./legalKnowledgeProvider";
 export interface SwarmRegulationStoreOptions {
   gatewayUrl?: string;
   postageBatchId?: string;
+  timeoutMs?: number;
 }
 
 export interface SwarmUploadResult {
@@ -35,11 +36,13 @@ export interface RegulationCacheEntry {
 
 const DEFAULT_GATEWAY_URL = "https://bzz.limo";
 const DEFAULT_POSTAGE_BATCH_ID = "0000000000000000000000000000000000000000000000000000000000000000";
+const DEFAULT_TIMEOUT_MS = 8_000;
 const CACHE_INDEX_PATH = resolve(process.cwd(), "data", "regulation_cache", "index.json");
 
 export class SwarmRegulationStore {
   private readonly gatewayUrl: string;
   private readonly postageBatchId: string;
+  private readonly timeoutMs: number;
 
   constructor(options: SwarmRegulationStoreOptions = {}) {
     this.gatewayUrl = trimTrailingSlash(
@@ -47,6 +50,7 @@ export class SwarmRegulationStore {
     );
     this.postageBatchId =
       options.postageBatchId ?? process.env.SWARM_POSTAGE_BATCH_ID ?? DEFAULT_POSTAGE_BATCH_ID;
+    this.timeoutMs = options.timeoutMs ?? readPositiveIntegerEnv("SWARM_UPLOAD_TIMEOUT_MS", DEFAULT_TIMEOUT_MS);
   }
 
   async uploadRegulations(
@@ -77,6 +81,8 @@ export class SwarmRegulationStore {
 
     try {
       const url = `${this.gatewayUrl}/bzz?name=${encodeURIComponent(`${category}-regulations.json`)}`;
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), this.timeoutMs);
       const response = await fetch(url, {
         method: "POST",
         headers: {
@@ -84,7 +90,9 @@ export class SwarmRegulationStore {
           "swarm-postage-batch-id": this.postageBatchId,
         },
         body: payload,
+        signal: controller.signal,
       });
+      clearTimeout(timeout);
 
       if (!response.ok) {
         throw new Error(`Swarm upload returned HTTP ${response.status}: ${await response.text()}`);
@@ -185,4 +193,9 @@ function storeEvent(
 
 function trimTrailingSlash(url: string): string {
   return url.replace(/\/+$/, "");
+}
+
+function readPositiveIntegerEnv(name: string, fallback: number): number {
+  const parsed = Number.parseInt(process.env[name] ?? "", 10);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
 }

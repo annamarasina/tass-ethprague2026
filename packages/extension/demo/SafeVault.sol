@@ -2,7 +2,7 @@
 pragma solidity ^0.8.24;
 
 /// @title SafeVault
-/// @notice Demo contract for the Pre-Flight Auditor eligible mock path.
+/// @notice Demo contract for the Solid Scan eligible path.
 contract SafeVault {
     address public owner;
     mapping(address => uint256) public balances;
@@ -36,4 +36,3 @@ contract SafeVault {
         owner = nextOwner;
     }
 }
-

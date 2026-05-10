@@ -2,7 +2,7 @@ import * as vscode from "vscode";
 import type { AuditResult, SecurityFinding, Severity } from "../types";
 
 export function createDiagnosticsCollection(): vscode.DiagnosticCollection {
-  return vscode.languages.createDiagnosticCollection("pre-flight-auditor");
+  return vscode.languages.createDiagnosticCollection("solid-scan");
 }
 
 export function applyDiagnostics(collection: vscode.DiagnosticCollection, auditResult: AuditResult): void {
@@ -38,7 +38,7 @@ function toDiagnostic(finding: SecurityFinding): vscode.Diagnostic {
   );
 
   diagnostic.code = finding.id;
-  diagnostic.source = "Pre-Flight Auditor";
+  diagnostic.source = "Solid Scan";
   return diagnostic;
 }
 
@@ -53,4 +53,3 @@ function toDiagnosticSeverity(severity: Severity): vscode.DiagnosticSeverity {
 
   return vscode.DiagnosticSeverity.Information;
 }
-

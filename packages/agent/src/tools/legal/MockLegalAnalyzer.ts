@@ -38,6 +38,13 @@ export class MockLegalAnalyzer implements LegalAnalyzer {
 
     emit(event(input.auditId, "compliance_classify", "success",
       `AI agent classified contract as "${categoryResult.category}" (confidence: ${categoryResult.confidence})`, {
+      contractNames: intent.contractNames,
+      likelyProtocolType: intent.likelyProtocolType,
+      summary: intent.summary,
+      adminSignals: intent.adminSignals,
+      assetCustodySignals: intent.assetCustodySignals,
+      upgradeabilitySignals: intent.upgradeabilitySignals,
+      declaredClaims: intent.declaredClaims,
       category: categoryResult.category,
       confidence: categoryResult.confidence,
       reasoning: categoryResult.reasoning,
@@ -45,9 +52,21 @@ export class MockLegalAnalyzer implements LegalAnalyzer {
     }));
 
     // ── Step 3: AI agent calls the corresponding regulation scraper ──
+    emit(event(input.auditId, "compliance_payment", "success", "Agent payment path prepared for compliance actor workflow", {
+      network: process.env.X402_NETWORK ?? "sepolia",
+      asset: process.env.X402_ASSET ?? "USDC",
+      mode: process.env.APIFY_PROVIDER_MODE === "mcp-x402" ? "enforced" : "authorized",
+      providerMode: process.env.APIFY_PROVIDER_MODE ?? "token",
+      actorId: categoryResult.category,
+      category: categoryResult.category,
+      paymentTxHash: process.env.X402_PAYMENT_REFERENCE,
+    }));
+
     emit(event(input.auditId, "compliance_scrape", "info",
       `AI agent invoking ${categoryResult.category} regulation scraper via MCP`, {
       category: categoryResult.category,
+      actorId: categoryResult.category,
+      caller: "agent",
     }));
     await delay(250);
 

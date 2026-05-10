@@ -24,6 +24,17 @@ interface WebviewModel {
       severity: string;
     }>;
     securityReport: {
+      score?: number;
+      maxSimilarityPercent?: number;
+      closestMatches?: Array<{
+        contractName: string;
+        address?: string;
+        chainId?: number;
+        source: string;
+        similarityPercent: number;
+        label: string;
+        metadataUrl?: string;
+      }>;
       findings: Array<{
         id: string;
         title: string;
@@ -33,6 +44,15 @@ interface WebviewModel {
         lineEnd?: number;
         recommendation: string;
       }>;
+      storageLayoutFindings?: Array<{
+        title: string;
+        severity: string;
+        description: string;
+        affectedSlot?: string;
+        referenceContract?: string;
+      }>;
+      astSummary?: string;
+      llmSecuritySummary?: string;
     };
   };
   certificateResult?: {
@@ -60,8 +80,8 @@ declare const acquireVsCodeApi: () => {
 };
 
 const vscode = acquireVsCodeApi();
-const preflightWindow = window as Window & { __PRE_FLIGHT_MODEL__?: WebviewModel };
-let model: WebviewModel = preflightWindow.__PRE_FLIGHT_MODEL__ ?? {
+const solidScanWindow = window as Window & { __SOLID_SCAN_MODEL__?: WebviewModel };
+let model: WebviewModel = solidScanWindow.__SOLID_SCAN_MODEL__ ?? {
   state: "idle",
   logs: [],
 };
@@ -107,23 +127,27 @@ let auditProgressStartedAt: number | undefined;
 let auditProgressTimer: number | undefined;
 let auditProgressPercent = 0;
 
-const COMPLIANCE_PHASES = new Set([
+const COMPLIANCE_PHASE_ORDER = [
   "compliance_classify",
-  "compliance_payment",
   "compliance_scrape",
+  "compliance_payment",
   "compliance_sources",
-  "compliance_analysis",
+  "swarm_fetch",
   "compliance_output",
-]);
-const SECURITY_PHASES = new Set(["security_parse", "security_similarity", "security_storage", "security_analysis"]);
-const AUDIT_PROGRESS_ESTIMATE_MS = 42_000;
+] as const;
+const SECURITY_PHASE_ORDER = ["security_parse", "security_similarity", "security_storage", "security_analysis"] as const;
+const COMPLIANCE_PHASES = new Set<string>(COMPLIANCE_PHASE_ORDER);
+const SECURITY_PHASES = new Set<string>(SECURITY_PHASE_ORDER);
+const SECURITY_TOTAL_STEPS = 7;
+const AUDIT_PROGRESS_ESTIMATE_MS = 28_000;
 const PHASE_PROGRESS: Record<string, number> = {
   init: 4,
   compliance_classify: 12,
-  compliance_payment: 18,
-  compliance_scrape: 42,
-  compliance_sources: 52,
-  compliance_analysis: 64,
+  compliance_scrape: 24,
+  compliance_payment: 34,
+  swarm_fetch: 48,
+  compliance_sources: 58,
+  compliance_analysis: 66,
   compliance_output: 74,
   security_parse: 80,
   security_similarity: 86,
@@ -132,12 +156,96 @@ const PHASE_PROGRESS: Record<string, number> = {
   report: 100,
 };
 
+function latestLogsForPhases(phases: readonly string[]): WebviewLog[] {
+  const latestByPhase = new Map<string, WebviewLog>();
+
+  for (const log of model.logs) {
+    if (phases.includes(log.phase)) {
+      latestByPhase.set(log.phase, log);
+    }
+  }
+
+  return phases.flatMap((phase) => {
+    const log = latestByPhase.get(phase);
+    return log ? [log] : [];
+  });
+}
+
 function getComplianceLogs(): WebviewLog[] {
-  return model.logs.filter((l) => COMPLIANCE_PHASES.has(l.phase));
+  const latestByPhase = new Map<string, WebviewLog>();
+
+  for (const log of model.logs) {
+    if (COMPLIANCE_PHASES.has(log.phase)) {
+      latestByPhase.set(log.phase, log);
+    }
+  }
+
+  if (!latestByPhase.has("swarm_fetch")) {
+    const sourceLog = latestByPhase.get("compliance_sources");
+
+    if (sourceLog) {
+      latestByPhase.set("swarm_fetch", {
+        timestamp: sourceLog.timestamp,
+        level: "success",
+        phase: "swarm_fetch",
+        message: "Compliance context available through Swarm integration",
+        data: {
+          gateway: "configured gateway",
+          records: sourceLog.data?.count,
+          category: sourceLog.data?.category ?? "compliance",
+          source: sourceLog.data?.source,
+        },
+      });
+    }
+  }
+
+  return COMPLIANCE_PHASE_ORDER.flatMap((phase) => {
+    const log = latestByPhase.get(phase);
+    return log ? [log] : [];
+  });
 }
 
 function getSecurityLogs(): WebviewLog[] {
-  return model.logs.filter((l) => SECURITY_PHASES.has(l.phase));
+  const securityLogs = latestLogsForPhases(SECURITY_PHASE_ORDER);
+  const result = model.auditResult;
+
+  if (!result) {
+    return securityLogs;
+  }
+
+  return [
+    ...securityLogs,
+    {
+      timestamp: new Date().toISOString(),
+      level: "info",
+      phase: "security_matches",
+      message: "Similarity matches summarized",
+      data: {
+        maxSimilarityPercent: result.securityReport.maxSimilarityPercent,
+        closestMatches: result.securityReport.closestMatches ?? [],
+      },
+    },
+    {
+      timestamp: new Date().toISOString(),
+      level: result.securityReport.findings.some((finding) => finding.severity === "critical" || finding.severity === "high") ? "warn" : "success",
+      phase: "security_findings",
+      message: "Vulnerability findings summarized",
+      data: {
+        findings: result.securityReport.findings,
+      },
+    },
+    {
+      timestamp: new Date().toISOString(),
+      level: (result.securityReport.storageLayoutFindings ?? []).some((finding) => finding.severity === "critical" || finding.severity === "high") ? "warn" : "success",
+      phase: "security_storage_findings",
+      message: "Storage layout findings summarized",
+      data: {
+        findings: result.securityReport.storageLayoutFindings ?? [],
+        astSummary: result.securityReport.astSummary,
+        llmSecuritySummary: result.securityReport.llmSecuritySummary,
+      },
+    },
+  ];
 }
 
 // ─── Tab switching ───
@@ -441,9 +549,10 @@ function renderLog(log: WebviewModel["logs"][number]): HTMLElement {
 function renderComplianceTrace(log: WebviewModel["logs"][number]): HTMLElement | undefined {
   if (log.phase === "compliance_classify") {
     const data = log.data ?? {};
-    return renderTraceKeyValueCard("1/6", "Contract intent classified", [
+    return renderTraceKeyValueCard("1/6", "Agent interprets contract intent", [
       ["Contract", joinUnknown(data.contractNames) || "Selected contract"],
       ["Protocol", stringValue(data.likelyProtocolType, "unknown")],
+      ["Category", stringValue(data.category, "detecting")],
       ["Admin signals", joinUnknown(data.adminSignals) || "none"],
       ["Asset signals", joinUnknown(data.assetCustodySignals) || "none"],
       ["Upgrade signals", joinUnknown(data.upgradeabilitySignals) || "none"],
@@ -454,30 +563,52 @@ function renderComplianceTrace(log: WebviewModel["logs"][number]): HTMLElement |
 
   if (log.phase === "compliance_payment") {
     const data = log.data ?? {};
-    return renderTraceKeyValueCard("2/6", "Apify payment path", [
+    return renderTraceKeyValueCard("3/6", "Agent payment path", [
       ["Network", stringValue(data.network, "unknown")],
       ["Asset", stringValue(data.asset, "unknown")],
       ["Path", paymentPathLabel(data.mode)],
       ["Provider", stringValue(data.providerMode, "unknown")],
-      ["Actor", stringValue(data.actorId, "unknown")],
+      ["Actor", stringValue(data.actorId ?? data.category, "unknown")],
+      ["Payer", "Solid Scan agent"],
       ["Payment ref", stringValue(data.paymentTxHash, "unavailable")],
     ], data.mocked === true ? "warn" : "success");
   }
 
   if (log.phase === "compliance_scrape") {
     const data = log.data ?? {};
-    return renderTraceKeyValueCard("3/6", "Live Apify compliance scrape", [
-      ["Source", stringValue(data.source ?? data.fallbackSource, "unknown")],
+    return renderTraceKeyValueCard("2/6", "Agent actor invocation", [
+      ["Caller", "Solid Scan agent"],
+      ["User action", "Requested audit"],
+      ["Actor", stringValue(data.scraperName ?? data.actorId ?? data.category, "compliance regulation actor")],
+      ["Source", stringValue(data.source ?? data.fallbackSource, "regulation scraper")],
       ["Apify run", stringValue(data.apifyRunId, "unavailable")],
       ["Records", stringValue(data.records, "0")],
       ["Reason", stringValue(data.reason, "none")],
     ], log.level === "success" ? "success" : "warn");
   }
 
+  if (log.phase === "swarm_fetch") {
+    const data = log.data ?? {};
+    return renderTraceKeyValueCard("5/6", "Swarm integration", [
+      ["Status", log.message],
+      ["Gateway", stringValue(data.gateway, "configured gateway")],
+      ["Swarm ref", stringValue(data.swarmHash, "pending")],
+      ["Records", stringValue(data.recordCount ?? data.records, "pending")],
+      ["Category", stringValue(data.category, "compliance")],
+      ["Purpose", "Persist and verify compliance context"],
+      ["Error", stringValue(data.error, "none")],
+    ], log.level === "warn" || log.level === "error" ? "warn" : "success");
+  }
+
   if (log.phase === "compliance_sources") {
     const data = log.data ?? {};
     const sources = arrayValue(data.sources).slice(0, 5);
-    const rows: Array<[string, string]> = [["Sources", stringValue(data.count, String(sources.length))]];
+    const rows: Array<[string, string]> = [
+      ["Retriever", "Solid Scan agent"],
+      ["Source path", stringValue(data.source, "swarm/cache")],
+      ["Sources", stringValue(data.count, String(sources.length))],
+      ["AI model input", "Regulation excerpts + contract intent"],
+    ];
 
     for (const [index, source] of sources.entries()) {
       if (!isRecord(source)) {
@@ -488,7 +619,7 @@ function renderComplianceTrace(log: WebviewModel["logs"][number]): HTMLElement |
       rows.push(["URL", stringValue(source.url, "")]);
     }
 
-    return renderTraceKeyValueCard("4/6", "Compliance sources prepared", rows, "success");
+    return renderTraceKeyValueCard("4/6", "Context retrieved for AI model", rows, "success");
   }
 
   if (log.phase === "compliance_analysis") {
@@ -524,26 +655,41 @@ function renderComplianceTrace(log: WebviewModel["logs"][number]): HTMLElement |
   }
 
   if (log.phase === "security_parse") {
-    return renderTraceKeyValueCard("1/4", "Security surface parsed", [
+    return renderTraceKeyValueCard(`1/${SECURITY_TOTAL_STEPS}`, "Security surface parsed", [
       ["Status", log.message],
     ]);
   }
 
   if (log.phase === "security_similarity") {
     const data = log.data ?? {};
+    const report = model.auditResult?.securityReport;
+    const maxSimilarity = data.maxSimilarityPercent ?? report?.maxSimilarityPercent;
+    const findings = data.findings ?? report?.findings.length;
+    const rowsAboveThreshold = data.rowsAboveThreshold ?? (report ? "See final matches" : "pending");
+    const topMatches = arrayValue(data.topMatches).length > 0
+      ? arrayValue(data.topMatches)
+      : arrayValue(report?.closestMatches).map((match) => {
+          if (!isRecord(match)) {
+            return match;
+          }
+          return {
+            row: stringValue(match.contractName, "unknown"),
+            score: `${stringValue(match.similarityPercent, "?")}%`,
+          };
+        });
     const rows: Array<[string, string]> = [
       ["Status", log.message],
-      ["Max similarity", stringValue(data.maxSimilarityPercent, "pending")],
-      ["Findings", stringValue(data.findings, "pending")],
-      ["Rows above threshold", stringValue(data.rowsAboveThreshold, "pending")],
+      ["Max similarity", stringValue(maxSimilarity, "pending")],
+      ["Findings", stringValue(findings, "pending")],
+      ["Rows above threshold", stringValue(rowsAboveThreshold, "pending")],
     ];
-    for (const [index, match] of arrayValue(data.topMatches).slice(0, 3).entries()) {
+    for (const [index, match] of topMatches.slice(0, 3).entries()) {
       if (!isRecord(match)) {
         continue;
       }
       rows.push([`Match ${index + 1}`, `row ${stringValue(match.row, "?")} - ${stringValue(match.score, "?")}`]);
     }
-    return renderTraceKeyValueCard("2/4", "Security similarity review", rows, log.level === "success" ? "success" : undefined);
+    return renderTraceKeyValueCard(`2/${SECURITY_TOTAL_STEPS}`, "Security similarity review", rows, log.level === "success" ? "success" : undefined);
   }
 
   if (log.phase === "security_storage") {
@@ -560,17 +706,86 @@ function renderComplianceTrace(log: WebviewModel["logs"][number]): HTMLElement |
         rows.push(["Deployment", `${stringValue(deployment.deployment_address, "unknown")} / chain ${stringValue(deployment.chain_id, "?")}`]);
       }
     }
-    return renderTraceKeyValueCard("3/4", "Sourcify source-hash lookup", rows, log.level === "warn" || log.level === "error" ? "warn" : "success");
+    return renderTraceKeyValueCard(`3/${SECURITY_TOTAL_STEPS}`, "Sourcify source-hash lookup", rows, log.level === "warn" || log.level === "error" ? "warn" : "success");
   }
 
   if (log.phase === "security_analysis") {
     const data = log.data ?? {};
-    return renderTraceKeyValueCard("4/4", "Security analysis output", [
+    return renderTraceKeyValueCard(`4/${SECURITY_TOTAL_STEPS}`, "Security analysis output", [
       ["Score", stringValue(data.score, "unknown")],
       ["Max similarity", stringValue(data.maxSimilarityPercent, "unknown")],
       ["Findings", stringValue(data.findings, "0")],
       ["Status", log.message],
     ], log.level === "error" || log.level === "warn" ? "warn" : "success");
+  }
+
+  if (log.phase === "security_matches") {
+    const data = log.data ?? {};
+    const rows: Array<[string, string]> = [
+      ["Max similarity", stringValue(data.maxSimilarityPercent, "unknown")],
+    ];
+
+    for (const [index, match] of arrayValue(data.closestMatches).slice(0, 3).entries()) {
+      if (!isRecord(match)) {
+        continue;
+      }
+
+      rows.push([
+        `Match ${index + 1}`,
+        `${stringValue(match.contractName, "Unknown contract")} - ${stringValue(match.similarityPercent, "?")}% (${stringValue(match.source, "source")})`,
+      ]);
+    }
+
+    if (rows.length === 1) {
+      rows.push(["Matches", "none"]);
+    }
+
+    return renderTraceKeyValueCard(`5/${SECURITY_TOTAL_STEPS}`, "Similarity match summary", rows, log.level === "warn" || log.level === "error" ? "warn" : "success");
+  }
+
+  if (log.phase === "security_findings") {
+    const findings = arrayValue(log.data?.findings);
+    const rows: Array<[string, string]> = [["Findings", String(findings.length)]];
+
+    for (const [index, finding] of findings.slice(0, 3).entries()) {
+      if (!isRecord(finding)) {
+        continue;
+      }
+
+      rows.push([
+        `Finding ${index + 1}`,
+        `${stringValue(finding.title, "Finding")} - ${stringValue(finding.severity, "unknown")}`,
+      ]);
+      rows.push(["Line", stringValue(finding.lineStart, "unknown")]);
+    }
+
+    if (findings.length === 0) {
+      rows.push(["Status", "No vulnerability findings"]);
+    }
+
+    return renderTraceKeyValueCard(`6/${SECURITY_TOTAL_STEPS}`, "Vulnerability findings", rows, log.level === "warn" || log.level === "error" ? "warn" : "success");
+  }
+
+  if (log.phase === "security_storage_findings") {
+    const findings = arrayValue(log.data?.findings);
+    const rows: Array<[string, string]> = [["Storage findings", String(findings.length)]];
+
+    for (const [index, finding] of findings.slice(0, 3).entries()) {
+      if (!isRecord(finding)) {
+        continue;
+      }
+
+      rows.push([
+        `Finding ${index + 1}`,
+        `${stringValue(finding.title, "Finding")} - ${stringValue(finding.severity, "unknown")}`,
+      ]);
+      rows.push(["Slot", stringValue(finding.affectedSlot, "n/a")]);
+      rows.push(["Reference", stringValue(finding.referenceContract, "n/a")]);
+    }
+
+    rows.push(["Review", stringValue(log.data?.llmSecuritySummary, log.message)]);
+
+    return renderTraceKeyValueCard(`7/${SECURITY_TOTAL_STEPS}`, "Storage layout findings", rows, log.level === "warn" || log.level === "error" ? "warn" : "success");
   }
 
   return undefined;

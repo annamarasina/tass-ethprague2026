@@ -1,9 +1,9 @@
 {
-  "name": "pre-flight-auditor",
-  "displayName": "Pre-Flight Auditor",
-  "description": "Autonomous smart contract pre-flight audit agent for VS Code.",
+  "name": "solid-scan",
+  "displayName": "Solid Scan",
+  "description": "Autonomous smart contract audit agent for VS Code.",
   "version": "0.0.1",
-  "publisher": "preflight",
+  "publisher": "solidscan",
   "private": true,
   "engines": {
     "vscode": "^1.82.0"
@@ -17,31 +17,31 @@
   ],
   "activationEvents": [
     "*",
-    "onCommand:preflightAuditor.runAudit",
-    "onView:preflightAuditor.sidebar"
+    "onCommand:solidScan.runAudit",
+    "onView:solidScan.sidebar"
   ],
   "main": "./dist/extension.js",
   "contributes": {
     "commands": [
       {
-        "command": "preflightAuditor.runAudit",
-        "title": "Pre-Flight Auditor: Run Audit",
-        "category": "Pre-Flight Auditor"
+        "command": "solidScan.runAudit",
+        "title": "Solid Scan: Run Audit",
+        "category": "Solid Scan"
       }
     ],
     "viewsContainers": {
       "activitybar": [
         {
-          "id": "preflightAuditor",
-          "title": "Pre-Flight Auditor",
+          "id": "solidScan",
+          "title": "Solid Scan",
           "icon": "resources/shield.svg"
         }
       ]
     },
     "views": {
-      "preflightAuditor": [
+      "solidScan": [
         {
-          "id": "preflightAuditor.sidebar",
+          "id": "solidScan.sidebar",
           "name": "Audit",
           "type": "webview"
         }

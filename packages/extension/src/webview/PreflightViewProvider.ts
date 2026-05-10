@@ -77,7 +77,7 @@ export class PreflightViewProvider implements vscode.WebviewViewProvider {
     const activeFile = selectedDocument?.uri.fsPath;
     const sourceCode = options.sourceCode || selectedDocument?.getText();
 
-    await vscode.commands.executeCommand("workbench.view.extension.preflightAuditor");
+    await vscode.commands.executeCommand("workbench.view.extension.solidScan");
     clearDiagnostics(this.diagnostics);
 
     if (!sourceCode) {
@@ -98,7 +98,7 @@ export class PreflightViewProvider implements vscode.WebviewViewProvider {
       state: "running",
       selectedFilePath: activeFile ?? "pasted-code.sol",
       logs: [],
-      statusMessage: options.includeComplianceTrace ? "Compliance audit running" : "Audit running",
+      statusMessage: "Starting Solid Scan audit",
     });
 
     try {
@@ -148,8 +148,11 @@ export class PreflightViewProvider implements vscode.WebviewViewProvider {
     };
 
     this.outputChannel.appendLine(`[${level}] ${phase}: ${message}`);
+    const statusMessage = this.model.state === "running" ? statusForPhase(phase, message) : this.model.statusMessage;
+
     this.model = {
       ...this.model,
+      statusMessage,
       logs: [...this.model.logs, log],
     };
 
@@ -157,7 +160,7 @@ export class PreflightViewProvider implements vscode.WebviewViewProvider {
       type: "appendLog",
       log,
       state: this.model.state,
-      statusMessage: this.model.statusMessage,
+      statusMessage,
     });
   }
 
@@ -212,5 +215,40 @@ export class PreflightViewProvider implements vscode.WebviewViewProvider {
       });
       this.appendLog("error", "mint", message);
     }
+  }
+}
+
+function statusForPhase(phase: string, message: string): string {
+  switch (phase) {
+    case "init":
+      return "Preparing audit";
+    case "compliance_classify":
+      return "Agent interpreting contract intent";
+    case "compliance_scrape":
+      return "Agent calling compliance actors";
+    case "compliance_payment":
+    case "legal_payment":
+      return "Preparing x402 payment path";
+    case "swarm_fetch":
+      return "Syncing compliance context with Swarm";
+    case "compliance_sources":
+      return "Retrieving context for AI model";
+    case "compliance_analysis":
+    case "legal_analysis":
+      return "Running AI compliance analysis";
+    case "compliance_output":
+      return "Preparing compliance recommendations";
+    case "security_parse":
+      return "Preparing security comparison";
+    case "security_similarity":
+      return "Running embedded vulnerability comparison";
+    case "security_storage":
+      return "Checking Sourcify source-hash data";
+    case "security_analysis":
+      return "Preparing security findings";
+    case "report":
+      return "Generating report";
+    default:
+      return message || "Audit running";
   }
 }
