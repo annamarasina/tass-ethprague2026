@@ -766,7 +766,7 @@ function renderCertificate(): void {
   }
 
   if (baseScanLink) {
-    baseScanLink.textContent = `BaseScan: ${certificate.transactionHash}`;
+    baseScanLink.textContent = `${explorerLabel(certificate.baseScanUrl)}: ${certificate.transactionHash}`;
   }
 
   if (sourcifyLink) {
@@ -840,6 +840,18 @@ function renderItem(item: { id?: string; title: string; tag: string; body: strin
   }
 
   return row;
+}
+
+function explorerLabel(url: string): string {
+  if (url.includes("etherscan.io")) {
+    return "Etherscan";
+  }
+
+  if (url.includes("basescan.org")) {
+    return "BaseScan";
+  }
+
+  return "Explorer";
 }
 
 function severityRank(severity: string): number {

@@ -493,9 +493,15 @@ export function getWebviewHtml(webview: vscode.Webview, extensionUri: vscode.Uri
     }
 
     .log-carousel.compact-nav .log-nav {
-      padding-top: 6px;
+      padding-top: 4px;
       padding-bottom: 6px;
-      min-height: 42px;
+      min-height: 38px;
+    }
+
+    .log-carousel.compact-nav .logs {
+      height: 190px;
+      min-height: 190px;
+      padding-bottom: 8px;
     }
 
     .log-nav-btn {
@@ -1243,12 +1249,12 @@ export function getWebviewHtml(webview: vscode.Webview, extensionUri: vscode.Uri
     <div class="tab-content">
       <div id="tabCode" class="tab-pane active">
         <section class="code-input-section">
-          <label for="codeInput" class="code-label">Paste your Solidity code</label>
-          <textarea id="codeInput" class="code-textarea" placeholder="// SPDX-License-Identifier: MIT&#10;pragma solidity ^0.8.0;&#10;&#10;contract MyContract {&#10;    ...&#10;}" spellcheck="false"></textarea>
           <button id="seeReportFromCode" class="code-report-cta" type="button">
             <span>See my report</span>
             <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
           </button>
+          <label for="codeInput" class="code-label">Paste your Solidity code</label>
+          <textarea id="codeInput" class="code-textarea" placeholder="// SPDX-License-Identifier: MIT&#10;pragma solidity ^0.8.0;&#10;&#10;contract MyContract {&#10;    ...&#10;}" spellcheck="false"></textarea>
         </section>
       </div>
 

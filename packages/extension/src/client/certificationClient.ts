@@ -73,7 +73,7 @@ export class AgentCertificationClient {
   constructor(private readonly processManager: AgentProcessManager) {}
 
   async issueCertificate(auditResult: AuditResult, emit: EmitCertificationLog): Promise<CertificateResult> {
-    if (process.env.PREFLIGHT_CERTIFICATION_MODE !== "live") {
+    if (this.processManager.getEnvironmentValue("PREFLIGHT_CERTIFICATION_MODE") !== "live") {
       emit(localCertificationLog(auditResult.auditId, "mint", "warn", "Using local certificate path. Set PREFLIGHT_CERTIFICATION_MODE=live for Ethereum Sepolia minting."));
       return new MockCertificationClient().issueCertificate(auditResult, emit);
     }
