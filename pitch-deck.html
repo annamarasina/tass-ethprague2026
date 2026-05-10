@@ -487,6 +487,37 @@
         line-height: 1.4;
       }
 
+      .problem-list {
+        display: grid;
+        gap: 18px;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        list-style: none;
+        margin: 6px auto 0;
+        max-width: 980px;
+        padding: 0;
+        text-align: left;
+      }
+
+      .problem-list li {
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: rgba(17, 21, 45, 0.76);
+        color: #dce3ff;
+        font-size: clamp(19px, 2vw, 26px);
+        line-height: 1.25;
+        min-height: 132px;
+        padding: 22px 24px;
+      }
+
+      .problem-title {
+        font-size: clamp(54px, 8vw, 104px);
+        letter-spacing: 0;
+        line-height: 0.92;
+        margin-bottom: 12px;
+        transform: translateY(-28px);
+        text-transform: none;
+      }
+
       .footer {
         align-items: center;
         bottom: 22px;
@@ -584,6 +615,10 @@
         .metric-row,
         .card-grid,
         .impact-grid {
+          grid-template-columns: 1fr;
+        }
+
+        .problem-list {
           grid-template-columns: 1fr;
         }
 
@@ -854,9 +889,13 @@
       <section class="slide">
         <div class="layout center-stack">
           <div class="stack">
-            <p class="kicker">Problem</p>
-            <h2>Teams ship before they know what can break.</h2>
-            <p class="lead">Security, legal risk, and verified evidence live in separate workflows.</p>
+            <p class="kicker problem-title">Problem</p>
+            <ul class="problem-list">
+              <li>Crypto teams are still losing hundreds of millions to preventable exploits.</li>
+              <li>Losing hundreds of millions of dollars.</li>
+              <li>Legal risk is disconnected from what the Solidity code actually does.</li>
+              <li>Users lack trust before a protocol proves it is safe to use.</li>
+            </ul>
           </div>
         </div>
       </section>
