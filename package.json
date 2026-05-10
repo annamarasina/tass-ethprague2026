@@ -10,7 +10,9 @@
     "agent:legal-debug": "tsx packages/agent/src/scripts/legalDebug.ts",
     "backend3:demo": "tsx packages/agent/src/scripts/backend3Demo.ts",
     "backend3:demo:live": "tsx packages/agent/src/scripts/backend3Demo.ts --live",
-    "extension:compile": "npm run compile --prefix packages/extension"
+    "extension:compile": "npm run compile --prefix packages/extension",
+    "sepolia:deploy-registry": "forge script packages/contracts/script/Deploy.s.sol:Deploy --root packages/contracts --rpc-url $SEPOLIA_RPC_URL --private-key $PRIVATE_KEY --broadcast --verify --verifier sourcify",
+    "sepolia:cert-demo": "tsx packages/agent/src/scripts/backend3Demo.ts --live"
   },
   "dependencies": {
     "@ethersphere/bee-js": "^12.1.0",
@@ -20,6 +22,7 @@
     "viem": "^2.48.11"
   },
   "devDependencies": {
+    "@apify/mcpc": "^0.2.6",
     "@types/node": "^25.6.2",
     "tsx": "^4.21.0",
     "typescript": "^6.0.3"

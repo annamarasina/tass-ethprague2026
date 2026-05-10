@@ -1,4 +1,6 @@
 import type { AuditLogEvent, EmitLog } from "../../interfaces";
+import { execFile } from "node:child_process";
+import { promisify } from "node:util";
 import type { CodeIntentSummary } from "./codeIntentSummarizer";
 import {
   normalizeLegalKnowledgeRecords,
@@ -12,6 +14,10 @@ export interface ApifyX402LegalProviderOptions extends LegalKnowledgeProviderOpt
   apifyToken?: string;
   actorId?: string;
   apiBaseUrl?: string;
+  providerMode?: ApifyProviderMode;
+  mcpCommand?: string;
+  mcpSession?: string;
+  mcpDryRun?: boolean;
   timeoutMs?: number;
   fallbackProvider?: SwarmKnowledgeProvider;
   x402PaymentTxHash?: string;
@@ -36,8 +42,10 @@ export interface ApifyX402LegalResult {
 interface ApifyRunSyncResponse {
   items: unknown[];
   runId?: string;
+  paymentReference?: string;
 }
 
+type ApifyProviderMode = "token" | "mcp-x402";
 type X402Mode = "mock" | "enforced";
 
 interface PreparedX402Payment {
@@ -48,6 +56,8 @@ interface PreparedX402Payment {
 
 const DEFAULT_APIFY_API_BASE_URL = "https://api.apify.com/v2";
 const DEFAULT_GOOGLE_SEARCH_ACTOR_ID = "apify/google-search-scraper";
+const DEFAULT_APIFY_MCP_COMMAND = "mcpc";
+const DEFAULT_APIFY_MCP_SESSION = "@apify-x402";
 const DEFAULT_GOOGLE_SEARCH_COUNTRY = "us";
 const DEFAULT_GOOGLE_SEARCH_LANGUAGE = "en";
 const DEFAULT_GOOGLE_RESULTS_PER_PAGE = 10;
@@ -56,10 +66,16 @@ const ESMA_CRYPTO_NEWS_URL = "https://www.esma.europa.eu/press-news/esma-news?f%
 const EBA_HOME_URL = "https://www.eba.europa.eu/homepage";
 const DEFAULT_TIMEOUT_MS = 60_000;
 
+const execFileAsync = promisify(execFile);
+
 export class ApifyX402LegalProvider {
   private readonly apifyToken?: string;
   private readonly actorId?: string;
   private readonly apiBaseUrl: string;
+  private readonly providerMode: ApifyProviderMode;
+  private readonly mcpCommand: string;
+  private readonly mcpSession: string;
+  private readonly mcpDryRun: boolean;
   private readonly timeoutMs: number;
   private readonly fallbackProvider: SwarmKnowledgeProvider;
   private readonly maxRecords?: number;
@@ -72,6 +88,10 @@ export class ApifyX402LegalProvider {
     this.apifyToken = options.apifyToken ?? readOptionalEnv("APIFY_TOKEN");
     this.actorId = options.actorId ?? readOptionalEnv("APIFY_ACTOR_ID") ?? DEFAULT_GOOGLE_SEARCH_ACTOR_ID;
     this.apiBaseUrl = trimTrailingSlash(options.apiBaseUrl ?? readOptionalEnv("APIFY_API_BASE_URL") ?? DEFAULT_APIFY_API_BASE_URL);
+    this.providerMode = options.providerMode ?? readProviderMode();
+    this.mcpCommand = options.mcpCommand ?? readOptionalEnv("APIFY_MCP_COMMAND") ?? DEFAULT_APIFY_MCP_COMMAND;
+    this.mcpSession = options.mcpSession ?? readOptionalEnv("APIFY_MCP_SESSION") ?? DEFAULT_APIFY_MCP_SESSION;
+    this.mcpDryRun = options.mcpDryRun ?? parseBooleanEnv(process.env.APIFY_MCP_DRY_RUN, false);
     this.timeoutMs = options.timeoutMs ?? readPositiveIntegerEnv("APIFY_TIMEOUT_MS", DEFAULT_TIMEOUT_MS);
     this.fallbackProvider = fallbackProvider ?? new SwarmKnowledgeProvider(fallbackOptions);
     this.maxRecords = options.maxRecords;
@@ -83,15 +103,17 @@ export class ApifyX402LegalProvider {
     const x402Payment = this.prepareX402Payment(input.auditId);
     const x402PaymentTxHash = x402Payment.transactionHash;
 
-    emit?.(event(input.auditId, "legal_payment", "info", "Prepared x402 payment metadata for Apify legal actor", {
-      network: process.env.X402_NETWORK ?? "base-sepolia",
+    emit?.(event(input.auditId, "legal_payment", "info", "Prepared Apify x402 legal actor payment path", {
+      network: process.env.X402_NETWORK ?? "sepolia",
       asset: process.env.X402_ASSET ?? "USDC",
       paymentTxHash: x402PaymentTxHash,
       mode: x402Payment.mode,
       mocked: x402Payment.mocked,
+      providerMode: this.providerMode,
+      dryRun: this.mcpDryRun,
     }));
 
-    if (!this.apifyToken) {
+    if (this.providerMode === "token" && !this.apifyToken) {
       return this.fallback(input.auditId, x402PaymentTxHash, "APIFY_TOKEN is not configured", emit);
     }
 
@@ -102,6 +124,8 @@ export class ApifyX402LegalProvider {
     try {
       emit?.(event(input.auditId, "legal_scrape", "info", "Calling Apify legal actor", {
         actorId: this.actorId,
+        providerMode: this.providerMode,
+        mcpSession: this.providerMode === "mcp-x402" ? this.mcpSession : undefined,
       }));
 
       const response = await this.runActor(input);
@@ -115,7 +139,7 @@ export class ApifyX402LegalProvider {
         source: "apify",
         records,
         apifyRunId: response.runId ?? `apify-${input.auditId}`,
-        x402PaymentTxHash,
+        x402PaymentTxHash: response.paymentReference ?? x402PaymentTxHash,
       };
     } catch (error) {
       return this.fallback(
@@ -132,6 +156,14 @@ export class ApifyX402LegalProvider {
   }
 
   private async runActor(input: ApifyX402LegalProviderInput): Promise<ApifyRunSyncResponse> {
+    if (this.providerMode === "mcp-x402") {
+      return this.runActorViaMcp(input);
+    }
+
+    return this.runActorViaToken(input);
+  }
+
+  private async runActorViaToken(input: ApifyX402LegalProviderInput): Promise<ApifyRunSyncResponse> {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), this.timeoutMs);
     const actorPath = encodeActorId(this.actorId ?? "");
@@ -168,6 +200,51 @@ export class ApifyX402LegalProvider {
     }
   }
 
+  private async runActorViaMcp(input: ApifyX402LegalProviderInput): Promise<ApifyRunSyncResponse> {
+    if (this.mcpDryRun) {
+      await this.callMcpTool("search-apify-docs", ["query:=x402", "limit:=1"]);
+      throw new Error("APIFY_MCP_DRY_RUN=true verified the Apify x402 MCP session without running a paid Actor");
+    }
+
+    const actorInput = JSON.stringify(buildGoogleSearchInput(input));
+    const response = await this.callMcpTool("call-actor", [
+      `actor:=${this.actorId ?? DEFAULT_GOOGLE_SEARCH_ACTOR_ID}`,
+      `input:=${actorInput}`,
+    ]);
+    let items = extractMcpItems(response);
+
+    if (items.length === 0) {
+      const datasetId = extractStringByKey(response, ["datasetId", "defaultDatasetId"]);
+      if (datasetId) {
+        const outputResponse = await this.callMcpTool("get-actor-output", [`datasetId:=${datasetId}`, "limit:=50"]);
+        items = extractMcpItems(outputResponse);
+      }
+    }
+
+    if (items.length === 0) {
+      throw new Error("Apify MCP call returned no dataset items");
+    }
+
+    return {
+      items,
+      runId: extractStringByKey(response, ["runId", "actorRunId", "id"]),
+      paymentReference: extractStringByKey(response, ["paymentTxHash", "transactionHash", "paymentReference"]),
+    };
+  }
+
+  private async callMcpTool(toolName: string, args: string[]): Promise<unknown> {
+    const { stdout } = await execFileAsync(
+      this.mcpCommand,
+      ["--json", this.mcpSession, "tools-call", toolName, ...args],
+      {
+        timeout: this.timeoutMs,
+        maxBuffer: 8 * 1024 * 1024,
+      },
+    );
+
+    return parseJson(stdout, `Apify MCP ${toolName} output`);
+  }
+
   private async fallback(
     auditId: string,
     x402PaymentTxHash: string,
@@ -191,6 +268,14 @@ export class ApifyX402LegalProvider {
   }
 
   private prepareX402Payment(auditId: string): PreparedX402Payment {
+    if (this.providerMode === "mcp-x402") {
+      return {
+        transactionHash: `mcp-x402:${this.mcpSession}:${auditId}`,
+        mode: "enforced",
+        mocked: false,
+      };
+    }
+
     if (this.configuredPaymentTxHash) {
       return {
         transactionHash: this.configuredPaymentTxHash,
@@ -204,7 +289,7 @@ export class ApifyX402LegalProvider {
     }
 
     return {
-      transactionHash: mockHash(`${auditId}:x402:${process.env.X402_NETWORK ?? "base-sepolia"}`),
+      transactionHash: mockHash(`${auditId}:x402:${process.env.X402_NETWORK ?? "sepolia"}`),
       mode: "mock",
       mocked: true,
     };
@@ -306,6 +391,60 @@ function normalizeApifyItems(items: unknown[]): KnowledgeBaseRecord[] {
       },
     ];
   });
+}
+
+function extractMcpItems(value: unknown): unknown[] {
+  const decoded = decodeMcpPayload(value);
+  const directItems = pickItemsArray(decoded);
+  if (directItems) {
+    return directItems;
+  }
+
+  if (Array.isArray(decoded)) {
+    return decoded;
+  }
+
+  return [];
+}
+
+function decodeMcpPayload(value: unknown): unknown {
+  if (!isRecord(value)) {
+    return value;
+  }
+
+  if (isRecord(value.structuredContent)) {
+    return value.structuredContent;
+  }
+
+  const content = pickArray(value.content);
+  if (content) {
+    const decodedContent = content
+      .map((entry) => (isRecord(entry) ? pickString(entry.text) : undefined))
+      .filter((text): text is string => Boolean(text))
+      .map((text) => tryParseJson(text) ?? text);
+
+    const firstStructuredPayload = decodedContent.find((entry) => typeof entry === "object" && entry !== null);
+    if (firstStructuredPayload) {
+      return decodeMcpPayload(firstStructuredPayload);
+    }
+  }
+
+  return value;
+}
+
+function pickItemsArray(value: unknown): unknown[] | undefined {
+  if (!isRecord(value)) {
+    return undefined;
+  }
+
+  return (
+    pickArray(value.items) ??
+    pickArray(value.datasetItems) ??
+    pickArray(value.records) ??
+    pickArray(value.results) ??
+    (isRecord(value.output) ? pickItemsArray(value.output) : undefined) ??
+    (isRecord(value.data) ? pickItemsArray(value.data) : undefined)
+  );
 }
 
 function normalizeGoogleSearchItem(item: Record<string, unknown>): KnowledgeBaseRecord[] {
@@ -476,6 +615,15 @@ function readOptionalEnv(name: string): string | undefined {
   return value ? value : undefined;
 }
 
+function readProviderMode(): ApifyProviderMode {
+  const value = readOptionalEnv("APIFY_PROVIDER_MODE")?.toLowerCase();
+  if (value === "mcp-x402") {
+    return "mcp-x402";
+  }
+
+  return "token";
+}
+
 function readX402Mode(): X402Mode {
   const value = readOptionalEnv("X402_MODE")?.toLowerCase();
   if (value === "enforced") {
@@ -491,6 +639,57 @@ function parseBooleanEnv(value: string | undefined, fallback: boolean): boolean 
   }
 
   return ["1", "true", "yes", "on"].includes(value.toLowerCase());
+}
+
+function parseJson(value: string, label: string): unknown {
+  try {
+    return JSON.parse(value);
+  } catch (error) {
+    throw new Error(`${label} was not valid JSON: ${error instanceof Error ? error.message : "unknown parse error"}`);
+  }
+}
+
+function tryParseJson(value: string): unknown | undefined {
+  try {
+    return JSON.parse(value);
+  } catch {
+    return undefined;
+  }
+}
+
+function extractStringByKey(value: unknown, keys: string[]): string | undefined {
+  if (Array.isArray(value)) {
+    for (const item of value) {
+      const found = extractStringByKey(item, keys);
+      if (found) {
+        return found;
+      }
+    }
+
+    return undefined;
+  }
+
+  if (!isRecord(value)) {
+    return undefined;
+  }
+
+  for (const key of keys) {
+    const direct = pickString(value[key]);
+    if (direct) {
+      return direct;
+    }
+  }
+
+  for (const nestedValue of Object.values(value)) {
+    if (typeof nestedValue === "object" && nestedValue !== null) {
+      const found = extractStringByKey(nestedValue, keys);
+      if (found) {
+        return found;
+      }
+    }
+  }
+
+  return undefined;
 }
 
 function mockHash(seed: string): `0x${string}` {

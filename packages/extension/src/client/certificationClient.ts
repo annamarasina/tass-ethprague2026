@@ -1,6 +1,13 @@
+import { createInterface } from "node:readline";
 import type { AuditLogEvent, AuditResult, CertificateResult, Hex } from "../types";
+import type { AgentProcessManager } from "./processManager";
 
 type EmitCertificationLog = (event: AuditLogEvent) => void;
+
+type AgentCertificationResponse =
+  | { type: "log"; event: AuditLogEvent }
+  | { type: "certificate"; certificateResult: CertificateResult }
+  | { type: "error"; message: string };
 
 export class CertificationBlockedError extends Error {
   constructor(readonly auditId: string, readonly blockingReasons: string[]) {
@@ -36,9 +43,9 @@ export class MockCertificationClient {
       registryAddress: "0x1000000000000000000000000000000000000001",
       transactionHash,
       certificateHash,
-      baseScanUrl: `https://sepolia.basescan.org/tx/${transactionHash}`,
+      baseScanUrl: `https://sepolia.etherscan.io/tx/${transactionHash}`,
       reportUri: auditResult.reportUri,
-      sourcifyUrl: "https://repo.sourcify.dev/contracts/full_match/84532/0x1000000000000000000000000000000000000001",
+      sourcifyUrl: "https://repo.sourcify.dev/contracts/full_match/11155111/0x1000000000000000000000000000000000000001",
     };
   }
 
@@ -62,6 +69,71 @@ export class MockCertificationClient {
   }
 }
 
+export class AgentCertificationClient {
+  constructor(private readonly processManager: AgentProcessManager) {}
+
+  async issueCertificate(auditResult: AuditResult, emit: EmitCertificationLog): Promise<CertificateResult> {
+    if (process.env.PREFLIGHT_CERTIFICATION_MODE !== "live") {
+      emit(localCertificationLog(auditResult.auditId, "mint", "warn", "Using mock certificate client. Set PREFLIGHT_CERTIFICATION_MODE=live for Ethereum Sepolia minting."));
+      return new MockCertificationClient().issueCertificate(auditResult, emit);
+    }
+
+    if (!this.processManager.isAvailable()) {
+      emit(localCertificationLog(auditResult.auditId, "mint", "warn", "Local agent entrypoint unavailable; using mock certificate client."));
+      return new MockCertificationClient().issueCertificate(auditResult, emit);
+    }
+
+    const child = this.processManager.start();
+
+    return new Promise<CertificateResult>((resolve, reject) => {
+      const timeout = setTimeout(() => {
+        cleanup();
+        reject(new Error("Timed out waiting for Ethereum Sepolia certificate mint result"));
+      }, 120_000);
+
+      const lineReader = createInterface({ input: child.stdout });
+
+      const cleanup = (): void => {
+        clearTimeout(timeout);
+        lineReader.close();
+      };
+
+      lineReader.on("line", (line) => {
+        if (!line.trim()) {
+          return;
+        }
+
+        try {
+          const response = parseAgentCertificationResponse(line);
+
+          if (response.type === "log") {
+            emit(response.event);
+            return;
+          }
+
+          if (response.type === "error") {
+            cleanup();
+            reject(new Error(response.message));
+            return;
+          }
+
+          cleanup();
+          resolve(response.certificateResult);
+        } catch {
+          // Ignore non-JSON process output from shared long-lived agent logs.
+        }
+      });
+
+      lineReader.on("error", (error) => {
+        cleanup();
+        reject(error);
+      });
+
+      child.stdin.write(`${JSON.stringify({ type: "issueCertificate", auditResult })}\n`);
+    });
+  }
+}
+
 function mockHex(seed: string): Hex {
   let hash = 0x811c9dc5;
 
@@ -80,3 +152,27 @@ function delay(ms: number): Promise<void> {
   });
 }
 
+function parseAgentCertificationResponse(line: string): AgentCertificationResponse {
+  const parsed = JSON.parse(line) as AgentCertificationResponse;
+
+  if (parsed.type !== "log" && parsed.type !== "certificate" && parsed.type !== "error") {
+    throw new Error(`Unknown agent response type: ${(parsed as { type?: string }).type ?? "missing"}`);
+  }
+
+  return parsed;
+}
+
+function localCertificationLog(
+  auditId: string,
+  phase: AuditLogEvent["phase"],
+  level: AuditLogEvent["level"],
+  message: string,
+): AuditLogEvent {
+  return {
+    auditId,
+    timestamp: new Date().toISOString(),
+    phase,
+    level,
+    message,
+  };
+}

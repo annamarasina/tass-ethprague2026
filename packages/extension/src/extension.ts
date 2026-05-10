@@ -25,7 +25,7 @@ export function activate(context: vscode.ExtensionContext): void {
       diagnostics,
       sidebarProvider,
       vscode.window.registerWebviewViewProvider(SIDEBAR_VIEW_ID, sidebarProvider),
-      vscode.commands.registerCommand(RUN_AUDIT_COMMAND, () => sidebarProvider.runAuditFromActiveEditor()),
+      vscode.commands.registerCommand(RUN_AUDIT_COMMAND, () => sidebarProvider.runAuditFromActiveEditor({ includeComplianceTrace: true })),
     );
     
     outputChannel.appendLine(`[EXTENSION] ✓ ${EXTENSION_NAME} activated successfully`);

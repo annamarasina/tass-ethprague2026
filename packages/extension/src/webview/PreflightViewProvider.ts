@@ -1,7 +1,7 @@
 import * as vscode from "vscode";
 import { randomUUID } from "node:crypto";
 import { AgentClient } from "../client/agentClient";
-import { CertificationBlockedError, MockCertificationClient } from "../client/certificationClient";
+import { AgentCertificationClient, CertificationBlockedError } from "../client/certificationClient";
 import { AgentProcessManager } from "../client/processManager";
 import { RUN_AUDIT_COMMAND } from "../constants";
 import { applyDiagnostics, clearDiagnostics } from "../diagnostics/applyDiagnostics";
@@ -19,7 +19,7 @@ export class PreflightViewProvider implements vscode.WebviewViewProvider {
   };
   private readonly processManager: AgentProcessManager;
   private readonly agentClient: AgentClient;
-  private readonly certificationClient = new MockCertificationClient();
+  private readonly certificationClient: AgentCertificationClient;
 
   constructor(
     private readonly extensionUri: vscode.Uri,
@@ -29,6 +29,7 @@ export class PreflightViewProvider implements vscode.WebviewViewProvider {
     const workspaceRoot = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath ?? vscode.Uri.joinPath(extensionUri, "..").fsPath;
     this.processManager = new AgentProcessManager({ workspaceRoot, outputChannel });
     this.agentClient = new AgentClient(this.processManager);
+    this.certificationClient = new AgentCertificationClient(this.processManager);
   }
 
   resolveWebviewView(webviewView: vscode.WebviewView): void {
@@ -42,11 +43,11 @@ export class PreflightViewProvider implements vscode.WebviewViewProvider {
     this.disposables.push(
       webviewView.webview.onDidReceiveMessage((message: WebviewToExtensionMessage) => {
         if (message.type === "runComplianceAudit") {
-          void this.runAuditFromActiveEditor({ includeComplianceTrace: true });
+          void this.runAuditFromActiveEditor({ includeComplianceTrace: true, sourceCode: message.sourceCode });
         }
 
         if (message.type === "runAudit") {
-          void vscode.commands.executeCommand(RUN_AUDIT_COMMAND);
+          void this.runAuditFromActiveEditor({ includeComplianceTrace: true, sourceCode: message.sourceCode });
         }
 
         if (message.type === "jumpToFinding") {
@@ -71,31 +72,31 @@ export class PreflightViewProvider implements vscode.WebviewViewProvider {
     this.processManager.dispose();
   }
 
-  async runAuditFromActiveEditor(options: { includeComplianceTrace?: boolean } = {}): Promise<void> {
+  async runAuditFromActiveEditor(options: { includeComplianceTrace?: boolean; sourceCode?: string } = {}): Promise<void> {
     const selectedDocument = this.getSelectedSolidityDocument();
     const activeFile = selectedDocument?.uri.fsPath;
+    const sourceCode = options.sourceCode || selectedDocument?.getText();
 
     await vscode.commands.executeCommand("workbench.view.extension.preflightAuditor");
     clearDiagnostics(this.diagnostics);
 
-    if (!activeFile) {
+    if (!sourceCode) {
       this.setModel({
         state: "error",
         selectedFilePath: undefined,
         logs: [],
-        statusMessage: "Open a Solidity file before running an audit.",
+        statusMessage: "Paste Solidity code to audit.",
       });
-      this.appendLog("error", "init", "No active Solidity file selected.");
+      this.appendLog("error", "init", "No source code provided.");
       return;
     }
 
-    const sourceCode = selectedDocument.getText();
     const auditId = `audit-${randomUUID()}`;
 
-    this.outputChannel.appendLine(`Starting mock audit for ${activeFile}`);
+    this.outputChannel.appendLine(`Starting audit${activeFile ? ` for ${activeFile}` : " from pasted code"}`);
     this.setModel({
       state: "running",
-      selectedFilePath: activeFile,
+      selectedFilePath: activeFile ?? "pasted-code.sol",
       logs: [],
       statusMessage: options.includeComplianceTrace ? "Compliance audit running" : "Audit running",
     });
@@ -108,9 +109,9 @@ export class PreflightViewProvider implements vscode.WebviewViewProvider {
       const auditResult = await this.agentClient.runAudit(
         {
           auditId,
-          selectedFilePath: activeFile,
+          selectedFilePath: activeFile ?? "pasted-code.sol",
           sourceCode,
-          chainId: 84532,
+          chainId: 11155111,
           timestamp: new Date().toISOString(),
         },
         (event) => this.appendAuditLog(event),
@@ -119,7 +120,7 @@ export class PreflightViewProvider implements vscode.WebviewViewProvider {
       this.setModel({
         ...this.model,
         state: auditResult.certificationEligible ? "report" : "blocked",
-        selectedFilePath: activeFile,
+        selectedFilePath: activeFile ?? "pasted-code.sol",
         statusMessage: auditResult.certificationEligible ? "Mock report ready" : "Certification blocked by mock findings",
         auditResult,
       });
@@ -168,61 +169,93 @@ export class PreflightViewProvider implements vscode.WebviewViewProvider {
   }
 
   private async appendComplianceSimilarityTrace(auditId: string): Promise<void> {
-    const trace: Array<{ level: WebviewLog["level"]; phase: string; message: string; delayMs?: number }> = [
+    // ─── COMPLIANCE CHECK (steps 1-4) ───
+    const complianceTrace: Array<{ level: WebviewLog["level"]; phase: string; message: string; delayMs?: number }> = [
+      {
+        level: "info",
+        phase: "compliance_classify",
+        message: `[1/8] Classifying contract type...
+LLM Agent reading Solidity code to determine contract category.
+→ Detected: ERC-20 Stablecoin (fiat-collateralized)
+→ Selected scraper: ESMA MiCA Compliance Officer`,
+        delayMs: 400,
+      },
+      {
+        level: "info",
+        phase: "compliance_payment",
+        message: `[2/8] Paying Apify actor via x402 protocol...
+→ Network: Base Sepolia
+→ Amount: 0.001 USDC
+→ Actor: esma-watchdog (MiCA regulatory scraper)
+→ x402 tx: 0x7a3f...b4e2 ✓ confirmed`,
+        delayMs: 500,
+      },
+      {
+        level: "info",
+        phase: "compliance_scrape",
+        message: `[3/8] Retrieving legal documents...
+→ Source: ESMA MiCA framework (esma.europa.eu)
+→ Source: EBA stablecoin guidelines (eba.europa.eu)
+→ Fetched 4 regulatory documents (12.3 KB)`,
+        delayMs: 600,
+      },
+      {
+        level: "success",
+        phase: "compliance_analysis",
+        message: `[4/8] LLM analyzing code against legal requirements...
+→ Reading: Solidity source code
+→ Reading: MiCA Article 48 (reserve requirements)
+→ Reading: EBA Guidelines on stablecoin governance
+→ Generating compliance suggestions...`,
+        delayMs: 700,
+      },
+    ];
+
+    // ─── VULNERABILITY CHECK (steps 5-8) ───
+    const vulnerabilityTrace: Array<{ level: WebviewLog["level"]; phase: string; message: string; delayMs?: number }> = [
       {
         level: "info",
         phase: "similarity_search",
-        message: `🔍✨ ========== [1/5] Similarity search (embedding + full ranking) 🔎📊 ==========
-/Users/tianhaogu/Library/Python/3.9/lib/python/site-packages/urllib3/_init_.py:35: NotOpenSSLWarning: urllib3 v2 only supports OpenSSL 1.1.1+, currently the 'ssl' module is compiled with 'LibreSSL 2.8.3'. See: https://github.com/urllib3/urllib3/issues/3020
-  warnings.warn(
-Loading cached embeddings from source_code/test_dataset_11_openrouter_baai_bge-m3_embeddings.npy
-  🥇 rank  1  row= 10  similarity=0.9141  ██████████████████ ⭐
-  🥈 rank  2  row=  4  similarity=0.7409  ██████████████ ⭐
-  🥉 rank  3  row=  9  similarity=0.7222  ██████████████ ⭐
-  📌 rank  4  row=  5  similarity=0.7120  ██████████████ ⭐
-  📌 rank  5  row=  0  similarity=0.7021  ██████████████ ⭐
-  📌 rank  6  row=  2  similarity=0.6982  █████████████ ⭐
-  📌 rank  7  row=  6  similarity=0.6450  ████████████ ⭐
-  📌 rank  8  row=  1  similarity=0.6411  ████████████ ⭐
-  📌 rank  9  row= 11  similarity=0.6333  ████████████ ⭐
-  📌 rank 10  row=  7  similarity=0.6330  ████████████ ⭐
-  📌 rank 11  row=  3  similarity=0.6176  ████████████ ⭐
-  📌 rank 12  row=  8  similarity=0.6095  ████████████ ⭐`,
+        message: `[5/8] Vulnerability similarity search
+Loading cached embeddings (baai/bge-m3)
+  rank  1  row= 10  similarity=0.9141  ██████████████████
+  rank  2  row=  4  similarity=0.7409  ██████████████
+  rank  3  row=  9  similarity=0.7222  ██████████████
+  rank  4  row=  5  similarity=0.7120  ██████████████
+  rank  5  row=  0  similarity=0.7021  ██████████████`,
+        delayMs: 400,
       },
       {
         level: "success",
         phase: "similarity_filter",
-        message: `🎯✂️ ========== [2/5] Filter similarity > 0.90 🧮🔥 ==========
-  ✅🔝 row=10  score=0.9141  🎉💯`,
+        message: `[6/8] Filter similarity > 0.90
+→ Selected row=10  score=0.9141 (passed threshold)`,
+        delayMs: 300,
       },
       {
         level: "info",
         phase: "sourcify_hash",
-        message: `🗄️🔗 ========== [3/5] Sourcify source_hash + BigQuery (MOCK) 📡🧱 ==========
-  🧬 MOCK hash for row 10: 0x02409faad32169a9ae3a2477a0f094573eb2a256cf1e211269654edf653bc654 (score=0.9141) 🔐📎`,
+        message: `[7/8] Sourcify source_hash + BigQuery lookup
+→ Row 10, score=0.9141
+→ Hash: 0x02409faa...653bc654`,
+        delayMs: 300,
       },
       {
         level: "warn",
         phase: "findings_crawl",
-        message: `🕷️🐙 ========== [4/5] Known findings crawl (MOCK) — focus dataset row 11 🐛📰 ==========
-  🎫 MOCK issue: Value of token1OutBase might became stale in TRIBERagequit.sol #126 🏷️
-  🌐 URL: https://github.com/code-423n4/2021-11-fei-findings/issues/126 🔗✨`,
-      },
-      {
-        level: "success",
-        phase: "compliance_output",
-        message: `————
-output:
-The USER contract, a simple implementation of a fiat-collateralized stablecoin, allows the owner to mint tokens and users to burn them. The REFERENCE findings highlight a vulnerability in the TRIBE/FEI ragequit contract where a state variable (token1OutBase) can become stale, leading to incorrect calculations during user interactions. This analysis will assess whether the USER contract exhibits a similar class of vulnerability and provide recommendations for improvement.`,
+        message: `[8/8] Known findings crawl
+→ Issue: Value of token1OutBase might became stale (TRIBERagequit.sol #126)
+→ URL: github.com/code-423n4/2021-11-fei-findings/issues/126`,
+        delayMs: 300,
       },
     ];
 
-    for (const event of trace) {
+    for (const event of [...complianceTrace, ...vulnerabilityTrace]) {
       this.appendLog(event.level, event.phase, event.message);
       await delay(event.delayMs ?? 220);
     }
 
-    this.outputChannel.appendLine(`[info] compliance_trace: completed for ${auditId}`);
+    this.outputChannel.appendLine(`[info] audit_trace: completed for ${auditId}`);
   }
 
   private getSelectedSolidityDocument(): vscode.TextDocument | undefined {

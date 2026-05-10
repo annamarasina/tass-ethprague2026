@@ -26,13 +26,14 @@ const baseAuditResult = {
     llmSecuritySummary: "Mock audit result is eligible for certification.",
   },
   createdAt: "2026-05-08T00:00:00.000Z",
-} satisfies Omit<AuditResult, "auditId" | "certificationEligible" | "blockingReasons">;
+} satisfies Omit<AuditResult, "auditId" | "certificationEligible" | "blockingReasons" | "complianceSuggestions">;
 
 export const eligibleMockAuditResult: AuditResult = {
   ...baseAuditResult,
   auditId: "mock-audit-eligible",
   certificationEligible: true,
   blockingReasons: [],
+  complianceSuggestions: [],
 };
 
 export const blockedMockAuditResult: AuditResult = {
@@ -41,6 +42,7 @@ export const blockedMockAuditResult: AuditResult = {
   totalScore: 41,
   certificationEligible: false,
   blockingReasons: ["Critical proxy storage collision risk"],
+  complianceSuggestions: [],
   securityReport: {
     ...baseAuditResult.securityReport,
     score: 35,

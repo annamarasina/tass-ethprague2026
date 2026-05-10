@@ -267,6 +267,8 @@ Files expected:
 Implementation tasks:
 - Wrap Apify actor call.
 - Add x402 payment placeholder or real payment integration.
+- Support `APIFY_PROVIDER_MODE=mcp-x402`, where the agent calls the Apify MCP `call-actor` tool through `mcpc` and `mcpc` signs/retries x402 payment without an Apify API token.
+- Support `APIFY_MCP_DRY_RUN=true` for no-spend demos that verify the MCP session with a free docs call and then fall back to cached legal knowledge.
 - Return Apify run ID.
 - Return x402 payment tx hash when available.
 - Normalize Apify output into legal knowledge records.
