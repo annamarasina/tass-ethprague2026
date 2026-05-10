@@ -3,7 +3,7 @@ import { resolve } from "node:path";
 import { runAudit } from "../auditOrchestrator";
 import type { AuditInput } from "../interfaces";
 
-const fixturePath = resolve(process.cwd(), "agent", "src", "tools", "legal", "__fixtures__", "NoAdminClaimVault.sol");
+const fixturePath = resolve(process.cwd(), "packages", "agent", "src", "tools", "legal", "__fixtures__", "NoAdminClaimVault.sol");
 const sourceCode = readFileSync(fixturePath, "utf8");
 
 const input: AuditInput = {
@@ -40,6 +40,7 @@ console.log(JSON.stringify(
     totalScore: result.totalScore,
     certificationEligible: result.certificationEligible,
     legalRisk: result.legalReport.riskLevel,
+    complianceSuggestions: result.complianceSuggestions.length,
     securityFindings: result.securityReport.findings.length,
     apifyRunId: result.legalReport.apifyRunId,
     x402PaymentTxHash: result.legalReport.x402PaymentTxHash,

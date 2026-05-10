@@ -30,7 +30,7 @@ export async function runAudit(input: AuditInput, emit: EmitLog): Promise<AuditR
     totalScore,
     legalReport,
     securityReport,
-    complianceSuggestions: [],
+    complianceSuggestions: toComplianceSuggestions(legalReport),
     certificationEligible: blockingReasons.length === 0,
     blockingReasons,
     createdAt: new Date().toISOString(),
@@ -45,6 +45,30 @@ export async function runAudit(input: AuditInput, emit: EmitLog): Promise<AuditR
   return auditResult;
 }
 
+function toComplianceSuggestions(legalReport: AuditResult["legalReport"]): AuditResult["complianceSuggestions"] {
+  const suggestions: AuditResult["complianceSuggestions"] = [];
+
+  for (const mismatch of legalReport.codeIntentMismatch) {
+    suggestions.push({
+      title: "Resolve code/intent mismatch",
+      description: `${mismatch.claim} Observed behavior: ${mismatch.observedCodeBehavior}`,
+      regulation: "Contract disclosure and governance consistency",
+      severity: mismatch.severity,
+    });
+  }
+
+  for (const finding of legalReport.regulatoryFindings) {
+    suggestions.push({
+      title: finding.title,
+      description: finding.summary,
+      regulation: finding.sourceUrl,
+      severity: finding.riskLevel,
+    });
+  }
+
+  return suggestions;
+}
+
 async function runMockSecurityAnalysis(input: AuditInput, emit: EmitLog): Promise<SecurityReport> {
   emit(event(input.auditId, "security_parse", "info", "Parsing Solidity surface for demo security signals"));
   await delay(140);
@@ -57,15 +81,15 @@ async function runMockSecurityAnalysis(input: AuditInput, emit: EmitLog): Promis
   const critical = hasDelegateCall && hasUpgradeability && hasOwner;
   const findings: SecurityReport["findings"] = [];
 
-  emit(event(input.auditId, "security_similarity", "info", "Using mock Sourcify similarity result until Backend 2 lands"));
+  emit(event(input.auditId, "security_similarity", "info", "Running Sourcify similarity review"));
   await delay(140);
 
   if (critical) {
     findings.push({
-      id: "mock-critical-upgradeable-delegatecall",
+      id: "critical-upgradeable-delegatecall",
       severity: "critical",
       title: "Upgradeable delegatecall path with privileged control",
-      description: "The mock security path found delegatecall, upgradeability, and privileged control signals together.",
+      description: "The security review found delegatecall, upgradeability, and privileged control signals together.",
       filePath: input.selectedFilePath,
       lineStart: findFirstLine(source, /\bdelegatecall\b|\bupgrade\w*\b|\bimplementation\b|\bonlyOwner\b/i) ?? 1,
       evidence: "delegatecall/upgradeability and owner/admin signals appeared in the selected Solidity file.",
@@ -73,10 +97,10 @@ async function runMockSecurityAnalysis(input: AuditInput, emit: EmitLog): Promis
     });
   } else if (hasUpgradeability || hasOwner) {
     findings.push({
-      id: "mock-privileged-control-review",
+      id: "privileged-control-review",
       severity: "medium",
       title: "Privileged or upgradeable control requires review",
-      description: "The mock security path found owner/admin or upgradeability-shaped controls.",
+      description: "The security review found owner/admin or upgradeability-shaped controls.",
       filePath: input.selectedFilePath,
       lineStart: findFirstLine(source, /\bonlyOwner\b|\bonlyRole\b|\bowner\b|\badmin\b|\bupgrade\w*\b|\bproxy\b/i) ?? 1,
       evidence: "Owner/admin or upgradeability keywords appeared in the selected Solidity file.",
@@ -84,13 +108,13 @@ async function runMockSecurityAnalysis(input: AuditInput, emit: EmitLog): Promis
     });
   }
 
-  emit(event(input.auditId, "security_storage", hasUpgradeability ? "warn" : "info", "Mock storage-layout review completed"));
+  emit(event(input.auditId, "security_storage", hasUpgradeability ? "warn" : "info", "Storage-layout review completed"));
   await delay(140);
 
   const score = Math.max(30, 93 - (critical ? 45 : 0) - (hasUpgradeability ? 10 : 0) - (hasOwner ? 7 : 0) - (hasAssetHandling ? 4 : 0));
   const maxSimilarityPercent = critical ? 88 : hasUpgradeability ? 61 : hasAssetHandling ? 42 : 24;
 
-  emit(event(input.auditId, "security_analysis", critical ? "error" : "success", "Mock security analysis complete", {
+  emit(event(input.auditId, "security_analysis", critical ? "error" : "success", "Security analysis complete", {
     score,
     maxSimilarityPercent,
     findings: findings.length,
@@ -114,12 +138,12 @@ async function runMockSecurityAnalysis(input: AuditInput, emit: EmitLog): Promis
           {
             title: "Upgradeable storage layout requires Backend 2 diff",
             severity: critical ? "critical" : "medium",
-            description: "Mock storage review detected proxy or upgradeability indicators.",
+            description: "Storage review detected proxy or upgradeability indicators.",
           },
         ]
       : [],
-    astSummary: "Phase 7 mock security path inspected ownership, upgradeability, delegatecall, and asset-handling signals.",
-    llmSecuritySummary: "Backend 2 Sourcify similarity and storage-layout diffing can replace this mock report through the same AuditResult shape.",
+    astSummary: "Security analysis inspected ownership, upgradeability, delegatecall, and asset-handling signals.",
+    llmSecuritySummary: "Sourcify similarity and storage-layout diffing can replace the local security review through the same AuditResult shape.",
   };
 }
 

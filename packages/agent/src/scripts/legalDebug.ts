@@ -7,7 +7,7 @@ const { runAudit } = await import("../auditOrchestrator");
 
 const selectedFilePath = resolve(
   process.cwd(),
-  process.argv[2] ?? "agent/src/tools/legal/__fixtures__/NoAdminClaimVault.sol",
+  process.argv[2] ?? "packages/agent/src/tools/legal/__fixtures__/NoAdminClaimVault.sol",
 );
 
 if (!existsSync(selectedFilePath)) {
@@ -25,7 +25,7 @@ const input: AuditInput = {
 
 const logs: Array<{ phase: string; level: string; message: string; data?: Record<string, unknown> }> = [];
 const result = await runAudit(input, (event) => {
-  if (event.phase.startsWith("legal") || event.phase === "swarm_fetch") {
+  if (event.phase.startsWith("legal") || event.phase.startsWith("compliance") || event.phase === "swarm_fetch") {
     logs.push({
       phase: event.phase,
       level: event.level,

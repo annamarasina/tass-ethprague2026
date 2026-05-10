@@ -7,6 +7,7 @@ export interface WebviewLog {
   level: "info" | "warn" | "error" | "success";
   phase: string;
   message: string;
+  data?: Record<string, unknown>;
 }
 
 export interface WebviewModel {

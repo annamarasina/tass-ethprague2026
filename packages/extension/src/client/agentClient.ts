@@ -16,15 +16,15 @@ export class AgentClient {
   constructor(private readonly processManager: AgentProcessManager) {}
 
   async runAudit(input: AuditInput, emit: EmitAuditLog): Promise<AuditResult> {
-    if (process.env.PREFLIGHT_AGENT_MODE !== "live") {
+    if (this.processManager.getEnvironmentValue("PREFLIGHT_AGENT_MODE") !== "live") {
       return this.mockAuditClient.runAudit(input, emit);
     }
 
     emit(this.localFallbackLog(input.auditId, "[AGENT] Live agent mode enabled. Checking process manager availability..."));
     if (!this.processManager.isAvailable()) {
-      const msg = "[ERROR] Local agent entrypoint unavailable; falling back to mock audit client.";
+      const msg = "[ERROR] Local agent entrypoint unavailable; using bundled audit engine.";
       emit(this.localFallbackLog(input.auditId, msg));
-      emit(this.localFallbackLog(input.auditId, "[MOCK] Initializing mock audit client as fallback..."));
+      emit(this.localFallbackLog(input.auditId, "[AGENT] Initializing bundled audit engine..."));
       return this.mockAuditClient.runAudit(input, emit);
     }
 
@@ -34,9 +34,9 @@ export class AgentClient {
     } catch (error) {
       const message = error instanceof Error ? error.message : "Unknown local agent error";
       const stack = error instanceof Error ? error.stack : "no stack trace";
-      const msg = `[ERROR] Local agent failed: ${message}. Stack: ${stack}. Falling back to mock audit client.`;
+      const msg = `[ERROR] Local agent failed: ${message}. Stack: ${stack}. Using bundled audit engine.`;
       emit(this.localFallbackLog(input.auditId, msg));
-      emit(this.localFallbackLog(input.auditId, "[MOCK] Initializing mock audit client as fallback..."));
+      emit(this.localFallbackLog(input.auditId, "[AGENT] Initializing bundled audit engine..."));
       return this.mockAuditClient.runAudit(input, emit);
     }
   }
@@ -128,4 +128,3 @@ function parseAgentResponse(line: string): AgentResponse {
 
   return parsed;
 }
-

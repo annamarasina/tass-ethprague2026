@@ -5,6 +5,7 @@ interface WebviewLog {
   level: "info" | "warn" | "error" | "success";
   phase: string;
   message: string;
+  data?: Record<string, unknown>;
 }
 
 interface WebviewModel {
@@ -70,7 +71,9 @@ const statusMessage = document.querySelector<HTMLElement>("#statusMessage");
 const statePill = document.querySelector<HTMLElement>("#statePill");
 const statusCard = document.querySelector<HTMLElement>("#statusCard");
 const progressBar = document.querySelector<HTMLElement>("#progressBar");
+const progressBarFill = document.querySelector<HTMLElement>("#progressBarFill");
 const codeInput = document.querySelector<HTMLTextAreaElement>("#codeInput");
+const seeReportFromCode = document.querySelector<HTMLButtonElement>("#seeReportFromCode");
 const summary = document.querySelector<HTMLElement>("#summary");
 const reportSubtitle = document.querySelector<HTMLElement>("#reportSubtitle");
 const mintCertificate = document.querySelector<HTMLButtonElement>("#mintCertificate");
@@ -100,9 +103,34 @@ const logIndexSecurity = document.querySelector<HTMLElement>("#logIndexSecurity"
 
 let complianceLogIndex = 0;
 let securityLogIndex = 0;
+let auditProgressStartedAt: number | undefined;
+let auditProgressTimer: number | undefined;
+let auditProgressPercent = 0;
 
-const COMPLIANCE_PHASES = new Set(["compliance_classify", "compliance_payment", "compliance_scrape", "compliance_analysis"]);
-const SECURITY_PHASES = new Set(["similarity_search", "similarity_filter", "sourcify_hash", "findings_crawl"]);
+const COMPLIANCE_PHASES = new Set([
+  "compliance_classify",
+  "compliance_payment",
+  "compliance_scrape",
+  "compliance_sources",
+  "compliance_analysis",
+  "compliance_output",
+]);
+const SECURITY_PHASES = new Set(["security_parse", "security_similarity", "security_storage", "security_analysis"]);
+const AUDIT_PROGRESS_ESTIMATE_MS = 42_000;
+const PHASE_PROGRESS: Record<string, number> = {
+  init: 4,
+  compliance_classify: 12,
+  compliance_payment: 18,
+  compliance_scrape: 42,
+  compliance_sources: 52,
+  compliance_analysis: 64,
+  compliance_output: 74,
+  security_parse: 80,
+  security_similarity: 86,
+  security_storage: 90,
+  security_analysis: 95,
+  report: 100,
+};
 
 function getComplianceLogs(): WebviewLog[] {
   return model.logs.filter((l) => COMPLIANCE_PHASES.has(l.phase));
@@ -194,6 +222,10 @@ runButton?.addEventListener("click", () => {
   showMockPaymentRequest();
 });
 
+seeReportFromCode?.addEventListener("click", () => {
+  switchTab("tabLog");
+});
+
 mintCertificate?.addEventListener("click", () => {
   vscode.postMessage({ type: "mintCertificate" });
 });
@@ -223,6 +255,7 @@ window.addEventListener("message", (event: MessageEvent<ExtensionToWebviewMessag
 
   if (message.type === "replaceState") {
     model = message.model;
+    syncAuditProgress();
     render();
     return;
   }
@@ -234,10 +267,12 @@ window.addEventListener("message", (event: MessageEvent<ExtensionToWebviewMessag
       statusMessage: message.statusMessage ?? model.statusMessage,
       logs: [...model.logs, message.log],
     };
+    syncAuditProgress(message.log);
     render();
   }
 });
 
+syncAuditProgress();
 render();
 
 function render(): void {
@@ -261,12 +296,14 @@ function render(): void {
     statusCard.classList.toggle("running", model.state === "running");
   }
 
-  if (progressBar) {
-    progressBar.classList.toggle("active", model.state === "running");
-  }
+  renderAuditProgress();
 
   if (codeInput) {
     codeInput.disabled = model.state === "running";
+  }
+
+  if (seeReportFromCode) {
+    seeReportFromCode.classList.toggle("visible", Boolean(model.auditResult) && model.state !== "running");
   }
 
   // Keep carousels on first entry by default, only advance if still at 0
@@ -274,6 +311,61 @@ function render(): void {
   renderCarousel("security");
 
   renderSummary();
+}
+
+function syncAuditProgress(log?: WebviewLog): void {
+  if (model.state === "running") {
+    if (auditProgressStartedAt === undefined) {
+      auditProgressStartedAt = Date.now();
+      auditProgressPercent = Math.max(auditProgressPercent, 2);
+    }
+
+    if (log) {
+      auditProgressPercent = Math.max(auditProgressPercent, PHASE_PROGRESS[log.phase] ?? auditProgressPercent);
+    }
+
+    if (auditProgressTimer === undefined) {
+      auditProgressTimer = window.setInterval(() => {
+        updateTimeBasedProgress();
+        renderAuditProgress();
+      }, 350);
+    }
+
+    updateTimeBasedProgress();
+    return;
+  }
+
+  if (auditProgressTimer !== undefined) {
+    window.clearInterval(auditProgressTimer);
+    auditProgressTimer = undefined;
+  }
+
+  auditProgressStartedAt = undefined;
+  auditProgressPercent = model.state === "report" || model.state === "blocked" || model.state === "certified" ? 100 : 0;
+}
+
+function updateTimeBasedProgress(): void {
+  if (auditProgressStartedAt === undefined || model.state !== "running") {
+    return;
+  }
+
+  const elapsed = Date.now() - auditProgressStartedAt;
+  const elapsedRatio = Math.min(elapsed / AUDIT_PROGRESS_ESTIMATE_MS, 1);
+  const eased = 1 - Math.pow(1 - elapsedRatio, 2.2);
+  auditProgressPercent = Math.max(auditProgressPercent, Math.min(92, Math.round(eased * 92)));
+}
+
+function renderAuditProgress(): void {
+  const isRunning = model.state === "running";
+
+  if (progressBar) {
+    progressBar.classList.toggle("active", isRunning);
+    progressBar.setAttribute("aria-valuenow", String(Math.round(auditProgressPercent)));
+  }
+
+  if (progressBarFill) {
+    progressBarFill.style.width = `${Math.max(0, Math.min(100, auditProgressPercent))}%`;
+  }
 }
 
 function showMockPaymentRequest(): void {
@@ -284,7 +376,7 @@ function showMockPaymentRequest(): void {
   paymentPanel?.classList.add("visible");
 
   if (paymentSubtitle) {
-    paymentSubtitle.textContent = "Approve the simulated payment for the live Apify compliance lookup.";
+    paymentSubtitle.textContent = "Approve the x402 authorization for the live Apify compliance lookup.";
   }
 
   if (approvePayment) {
@@ -315,7 +407,7 @@ function approveMockPayment(): void {
   }
 
   if (paymentSubtitle) {
-    paymentSubtitle.textContent = "Mock x402 authorization prepared. Submitting paid audit request...";
+    paymentSubtitle.textContent = "x402 authorization prepared. Submitting paid audit request...";
   }
 
   window.setTimeout(() => {
@@ -348,70 +440,118 @@ function renderLog(log: WebviewModel["logs"][number]): HTMLElement {
 
 function renderComplianceTrace(log: WebviewModel["logs"][number]): HTMLElement | undefined {
   if (log.phase === "compliance_classify") {
-    return renderTraceKeyValueCard("1/4", "Classifying contract type", [
-      ["Agent action", "Reading Solidity code"],
-      ["Detected", "ERC-20 Stablecoin (fiat-collateralized)"],
-      ["Scraper", "ESMA MiCA Compliance Officer"],
+    const data = log.data ?? {};
+    return renderTraceKeyValueCard("1/6", "Contract intent classified", [
+      ["Contract", joinUnknown(data.contractNames) || "Selected contract"],
+      ["Protocol", stringValue(data.likelyProtocolType, "unknown")],
+      ["Admin signals", joinUnknown(data.adminSignals) || "none"],
+      ["Asset signals", joinUnknown(data.assetCustodySignals) || "none"],
+      ["Upgrade signals", joinUnknown(data.upgradeabilitySignals) || "none"],
+      ["Declared claims", joinUnknown(data.declaredClaims) || "none"],
+      ["Summary", stringValue(data.summary, log.message)],
     ]);
   }
 
   if (log.phase === "compliance_payment") {
-    return renderTraceKeyValueCard("2/4", "Paying Apify actor via x402", [
-      ["Network", "Base Sepolia"],
-      ["Amount", "0.001 USDC"],
-      ["Actor", "esma-watchdog"],
-      ["Status", "✓ confirmed"],
-    ], "success");
+    const data = log.data ?? {};
+    return renderTraceKeyValueCard("2/6", "Apify payment path", [
+      ["Network", stringValue(data.network, "unknown")],
+      ["Asset", stringValue(data.asset, "unknown")],
+      ["Path", paymentPathLabel(data.mode)],
+      ["Provider", stringValue(data.providerMode, "unknown")],
+      ["Actor", stringValue(data.actorId, "unknown")],
+      ["Payment ref", stringValue(data.paymentTxHash, "unavailable")],
+    ], data.mocked === true ? "warn" : "success");
   }
 
   if (log.phase === "compliance_scrape") {
-    return renderTraceKeyValueCard("3/4", "Retrieving legal documents", [
-      ["Source 1", "ESMA MiCA framework"],
-      ["Source 2", "EBA stablecoin guidelines"],
-      ["Documents", "4 fetched (12.3 KB)"],
-    ]);
+    const data = log.data ?? {};
+    return renderTraceKeyValueCard("3/6", "Live Apify compliance scrape", [
+      ["Source", stringValue(data.source ?? data.fallbackSource, "unknown")],
+      ["Apify run", stringValue(data.apifyRunId, "unavailable")],
+      ["Records", stringValue(data.records, "0")],
+      ["Reason", stringValue(data.reason, "none")],
+    ], log.level === "success" ? "success" : "warn");
+  }
+
+  if (log.phase === "compliance_sources") {
+    const data = log.data ?? {};
+    const sources = arrayValue(data.sources).slice(0, 5);
+    const rows: Array<[string, string]> = [["Sources", stringValue(data.count, String(sources.length))]];
+
+    for (const [index, source] of sources.entries()) {
+      if (!isRecord(source)) {
+        continue;
+      }
+
+      rows.push([`#${index + 1}`, `${stringValue(source.title, "Untitled")} (${stringValue(source.sourceType, "source")})`]);
+      rows.push(["URL", stringValue(source.url, "")]);
+    }
+
+    return renderTraceKeyValueCard("4/6", "Compliance sources prepared", rows, "success");
   }
 
   if (log.phase === "compliance_analysis") {
-    return renderTraceKeyValueCard("4/4", "LLM compliance analysis", [
-      ["Input 1", "Solidity source code"],
-      ["Input 2", "MiCA Article 48 (reserves)"],
-      ["Input 3", "EBA governance guidelines"],
-      ["Status", "Generating suggestions..."],
-    ], "success");
-  }
-
-  if (log.phase === "similarity_search") {
-    return renderTraceCard("1/4", "Vulnerability similarity search", "Embedding cache loaded and ranked against the vulnerability dataset.", [
-      ["1", "10", "0.9141", "██████████████████"],
-      ["2", "4", "0.7409", "██████████████"],
-      ["3", "9", "0.7222", "██████████████"],
-      ["4", "5", "0.7120", "██████████████"],
-      ["5", "0", "0.7021", "██████████████"],
+    const data = log.data ?? {};
+    return renderTraceKeyValueCard("5/6", "LLM compliance analysis", [
+      ["Sources", stringValue(data.sourceCount, "0")],
+      ["Protocol", stringValue(data.likelyProtocolType, "unknown")],
+      ["Status", log.message],
     ]);
   }
 
-  if (log.phase === "similarity_filter") {
-    return renderTraceKeyValueCard("2/4", "Filter similarity > 0.90", [
-      ["Selected row", "10"],
-      ["Score", "0.9141"],
-      ["Status", "Passed threshold"],
-    ], "success");
+  if (log.phase === "compliance_output") {
+    const data = log.data ?? {};
+    const findings = arrayValue(data.regulatoryFindings);
+    const mismatches = arrayValue(data.mismatches);
+    const rows: Array<[string, string]> = [
+      ["Risk", stringValue(data.riskLevel, "unknown")],
+      ["Score", stringValue(data.score, "0")],
+      ["Mismatches", String(mismatches.length)],
+      ["Findings", String(findings.length)],
+      ["Apify run", stringValue(data.apifyRunId, "unavailable")],
+    ];
+
+    for (const [index, finding] of findings.slice(0, 3).entries()) {
+      if (!isRecord(finding)) {
+        continue;
+      }
+      rows.push([`Finding ${index + 1}`, `${stringValue(finding.title, "Finding")} - ${stringValue(finding.summary, "")}`]);
+    }
+
+    rows.push(["Summary", stringValue(data.sentimentSummary, log.message)]);
+    return renderTraceKeyValueCard("6/6", "LLM compliance output", rows, data.riskLevel === "high" ? "warn" : "success");
   }
 
-  if (log.phase === "sourcify_hash") {
-    return renderTraceKeyValueCard("3/4", "Sourcify source_hash + BigQuery", [
-      ["Row", "10"],
-      ["Score", "0.9141"],
-      ["Source hash", "0x02409faa...653bc654"],
+  if (log.phase === "security_parse") {
+    return renderTraceKeyValueCard("1/4", "Security surface parsed", [
+      ["Status", log.message],
     ]);
   }
 
-  if (log.phase === "findings_crawl") {
-    return renderTraceKeyValueCard("4/4", "Known findings crawl", [
-      ["Issue", "token1OutBase stale in TRIBERagequit.sol"],
-      ["Reference", "code-423n4/2021-11-fei #126"],
-    ], "warn");
+  if (log.phase === "security_similarity") {
+    const data = log.data ?? {};
+    return renderTraceKeyValueCard("2/4", "Security similarity review", [
+      ["Status", log.message],
+      ["Max similarity", stringValue(data.maxSimilarityPercent, "pending")],
+      ["Findings", stringValue(data.findings, "pending")],
+    ]);
+  }
+
+  if (log.phase === "security_storage") {
+    return renderTraceKeyValueCard("3/4", "Storage layout review", [
+      ["Status", log.message],
+    ], log.level === "warn" || log.level === "error" ? "warn" : undefined);
+  }
+
+  if (log.phase === "security_analysis") {
+    const data = log.data ?? {};
+    return renderTraceKeyValueCard("4/4", "Security analysis output", [
+      ["Score", stringValue(data.score, "unknown")],
+      ["Max similarity", stringValue(data.maxSimilarityPercent, "unknown")],
+      ["Findings", stringValue(data.findings, "0")],
+      ["Status", log.message],
+    ], log.level === "error" || log.level === "warn" ? "warn" : "success");
   }
 
   return undefined;
@@ -495,6 +635,45 @@ function traceCell(text: string, className?: string): HTMLElement {
   element.className = className ?? "";
   element.textContent = text;
   return element;
+}
+
+function stringValue(value: unknown, fallback: string): string {
+  if (typeof value === "string" && value.trim().length > 0) {
+    return value;
+  }
+
+  if (typeof value === "number" || typeof value === "bigint" || typeof value === "boolean") {
+    return String(value);
+  }
+
+  return fallback;
+}
+
+function arrayValue(value: unknown): unknown[] {
+  return Array.isArray(value) ? value : [];
+}
+
+function joinUnknown(value: unknown): string {
+  return arrayValue(value)
+    .map((item) => stringValue(item, ""))
+    .filter(Boolean)
+    .join(", ");
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
+}
+
+function paymentPathLabel(value: unknown): string {
+  if (value === "enforced") {
+    return "settled";
+  }
+
+  if (value === "mock") {
+    return "authorized";
+  }
+
+  return stringValue(value, "authorized");
 }
 
 function defaultStatus(current: WebviewModel): string {

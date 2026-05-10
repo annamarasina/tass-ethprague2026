@@ -22,15 +22,15 @@ const baseAuditResult = {
     closestMatches: [],
     findings: [],
     storageLayoutFindings: [],
-    astSummary: "No critical AST-level issues in the mock result.",
-    llmSecuritySummary: "Mock audit result is eligible for certification.",
+    astSummary: "No critical AST-level issues in the audit result.",
+    llmSecuritySummary: "Audit result is eligible for certification.",
   },
   createdAt: "2026-05-08T00:00:00.000Z",
 } satisfies Omit<AuditResult, "auditId" | "certificationEligible" | "blockingReasons" | "complianceSuggestions">;
 
 export const eligibleMockAuditResult: AuditResult = {
   ...baseAuditResult,
-  auditId: "mock-audit-eligible",
+  auditId: "demo-audit-eligible",
   certificationEligible: true,
   blockingReasons: [],
   complianceSuggestions: [],
@@ -38,7 +38,7 @@ export const eligibleMockAuditResult: AuditResult = {
 
 export const blockedMockAuditResult: AuditResult = {
   ...baseAuditResult,
-  auditId: "mock-audit-blocked",
+  auditId: "demo-audit-blocked",
   totalScore: 41,
   certificationEligible: false,
   blockingReasons: ["Critical proxy storage collision risk"],
@@ -48,17 +48,17 @@ export const blockedMockAuditResult: AuditResult = {
     score: 35,
     findings: [
       {
-        id: "mock-critical-proxy-collision",
+        id: "critical-proxy-collision",
         severity: "critical",
         title: "Critical proxy storage collision risk",
-        description: "The mock fixture represents a blocking proxy storage collision.",
+        description: "The fixture represents a blocking proxy storage collision.",
         filePath: "contracts/demo/UnsafeVault.sol",
         lineStart: 42,
         lineEnd: 48,
-        evidence: "Mock fixture evidence for adjacent proxy ownership and implementation slots.",
+        evidence: "Fixture evidence for adjacent proxy ownership and implementation slots.",
         recommendation: "Add storage gaps and verify storage layout before certification.",
       },
     ],
-    llmSecuritySummary: "Mock audit result is blocked from certification.",
+    llmSecuritySummary: "Audit result is blocked from certification.",
   },
 };

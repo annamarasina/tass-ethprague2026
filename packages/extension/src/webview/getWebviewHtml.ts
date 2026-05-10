@@ -317,11 +317,11 @@ export function getWebviewHtml(webview: vscode.Webview, extensionUri: vscode.Uri
 
     .progress-bar-fill {
       height: 100%;
-      width: 40%;
+      width: 0%;
       border-radius: 3px;
       background: linear-gradient(90deg, var(--pf-accent), var(--pf-accent-light), var(--pf-accent));
       background-size: 200% 100%;
-      animation: shimmer 1.8s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+      transition: width 0.35s ease;
     }
 
     /* ─── CODE INPUT ─── */
@@ -372,6 +372,34 @@ export function getWebviewHtml(webview: vscode.Webview, extensionUri: vscode.Uri
     .code-textarea:disabled {
       opacity: 0.5;
       cursor: not-allowed;
+    }
+
+    .code-report-cta {
+      display: none;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      min-height: 34px;
+      border: 0.5px solid rgba(10, 132, 255, 0.35);
+      border-radius: var(--pf-radius-sm);
+      background: var(--pf-accent-soft);
+      color: var(--pf-accent);
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      box-shadow: none;
+      flex-shrink: 0;
+    }
+
+    .code-report-cta.visible {
+      display: flex;
+    }
+
+    .code-report-cta:hover {
+      background: rgba(10, 132, 255, 0.18);
+      transform: none;
+      box-shadow: none;
+      filter: none;
     }
 
     /* ─── LOG PANEL ─── */
@@ -425,17 +453,21 @@ export function getWebviewHtml(webview: vscode.Webview, extensionUri: vscode.Uri
       display: flex;
       flex-direction: column;
       min-height: 0;
+      border-bottom: 0.5px solid var(--pf-separator);
     }
 
     .logs {
       padding: 14px;
-      min-height: 180px;
+      height: 280px;
+      min-height: 280px;
       font-family: var(--pf-mono);
       font-size: 11px;
       line-height: 1.6;
       display: flex;
       align-items: flex-start;
       justify-content: center;
+      overflow-y: auto;
+      overflow-x: hidden;
     }
 
     .logs > * {
@@ -449,13 +481,21 @@ export function getWebviewHtml(webview: vscode.Webview, extensionUri: vscode.Uri
     }
 
     .log-nav {
-      display: flex;
+      display: grid;
+      grid-template-columns: 88px 64px 88px;
       align-items: center;
       justify-content: center;
-      gap: 16px;
+      gap: 12px;
       padding: 10px 14px;
       border-top: 0.5px solid var(--pf-separator);
       flex-shrink: 0;
+      min-height: 52px;
+    }
+
+    .log-carousel.compact-nav .log-nav {
+      padding-top: 6px;
+      padding-bottom: 6px;
+      min-height: 42px;
     }
 
     .log-nav-btn {
@@ -463,7 +503,9 @@ export function getWebviewHtml(webview: vscode.Webview, extensionUri: vscode.Uri
       align-items: center;
       justify-content: center;
       gap: 4px;
-      padding: 6px 12px;
+      width: 88px;
+      min-height: 32px;
+      padding: 7px 12px;
       border: 0.5px solid var(--pf-border);
       border-radius: 999px;
       background: var(--pf-surface);
@@ -499,7 +541,7 @@ export function getWebviewHtml(webview: vscode.Webview, extensionUri: vscode.Uri
       font-size: 11px;
       font-weight: 600;
       color: var(--pf-text-tertiary);
-      min-width: 50px;
+      min-width: 64px;
       text-align: center;
       letter-spacing: 0.2px;
     }
@@ -1175,7 +1217,7 @@ export function getWebviewHtml(webview: vscode.Webview, extensionUri: vscode.Uri
     <section id="paymentPanel" class="payment-panel">
       <div class="payment-header">
         <div class="payment-title">x402 Payment Required</div>
-        <div id="paymentSubtitle" class="payment-subtitle">Approve the simulated payment for the live Apify compliance lookup.</div>
+        <div id="paymentSubtitle" class="payment-subtitle">Approve the x402 authorization for the live Apify compliance lookup.</div>
       </div>
       <div class="payment-amount">0.001 USDC</div>
       <div class="payment-details">
@@ -1193,8 +1235,8 @@ export function getWebviewHtml(webview: vscode.Webview, extensionUri: vscode.Uri
         <span id="statusMessage" class="status-label">Ready</span>
         <span id="statePill" class="pill idle">idle</span>
       </div>
-      <div id="progressBar" class="progress-bar">
-        <div class="progress-bar-fill"></div>
+      <div id="progressBar" class="progress-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+        <div id="progressBarFill" class="progress-bar-fill"></div>
       </div>
     </section>
 
@@ -1203,6 +1245,10 @@ export function getWebviewHtml(webview: vscode.Webview, extensionUri: vscode.Uri
         <section class="code-input-section">
           <label for="codeInput" class="code-label">Paste your Solidity code</label>
           <textarea id="codeInput" class="code-textarea" placeholder="// SPDX-License-Identifier: MIT&#10;pragma solidity ^0.8.0;&#10;&#10;contract MyContract {&#10;    ...&#10;}" spellcheck="false"></textarea>
+          <button id="seeReportFromCode" class="code-report-cta" type="button">
+            <span>See my report</span>
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+          </button>
         </section>
       </div>
 
@@ -1227,7 +1273,7 @@ export function getWebviewHtml(webview: vscode.Webview, extensionUri: vscode.Uri
           </div>
 
           <div class="log-section-label">Security &amp; Vulnerability</div>
-          <div class="log-carousel">
+          <div class="log-carousel compact-nav">
             <div id="logsSecurity" class="logs">
               <div class="empty">Security steps will appear here.</div>
             </div>

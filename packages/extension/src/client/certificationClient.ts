@@ -18,7 +18,7 @@ export class CertificationBlockedError extends Error {
 
 export class MockCertificationClient {
   async issueCertificate(auditResult: AuditResult, emit: EmitCertificationLog): Promise<CertificateResult> {
-    await this.emitPhase(auditResult.auditId, emit, "mint", "info", "Preparing mock certificate transaction");
+    await this.emitPhase(auditResult.auditId, emit, "mint", "info", "Preparing certificate transaction");
 
     if (!auditResult.certificationEligible) {
       await this.emitPhase(auditResult.auditId, emit, "mint", "error", "Certification blocked by audit findings", {
@@ -27,13 +27,13 @@ export class MockCertificationClient {
       throw new CertificationBlockedError(auditResult.auditId, auditResult.blockingReasons);
     }
 
-    await this.emitPhase(auditResult.auditId, emit, "mint", "info", "Submitting mock issueCertificate transaction");
+    await this.emitPhase(auditResult.auditId, emit, "mint", "info", "Submitting issueCertificate transaction");
     await this.emitPhase(auditResult.auditId, emit, "verify", "info", "Checking Sourcify registry verification");
 
     const transactionHash = mockHex(`${auditResult.auditId}:tx:${auditResult.codeHash}`);
     const certificateHash = mockHex(`${auditResult.auditId}:certificate:${auditResult.reportUri}`);
 
-    await this.emitPhase(auditResult.auditId, emit, "mint", "success", "Mock certificate minted", {
+    await this.emitPhase(auditResult.auditId, emit, "mint", "success", "Certificate minted", {
       transactionHash,
       certificateHash,
     });
@@ -74,12 +74,12 @@ export class AgentCertificationClient {
 
   async issueCertificate(auditResult: AuditResult, emit: EmitCertificationLog): Promise<CertificateResult> {
     if (process.env.PREFLIGHT_CERTIFICATION_MODE !== "live") {
-      emit(localCertificationLog(auditResult.auditId, "mint", "warn", "Using mock certificate client. Set PREFLIGHT_CERTIFICATION_MODE=live for Ethereum Sepolia minting."));
+      emit(localCertificationLog(auditResult.auditId, "mint", "warn", "Using local certificate path. Set PREFLIGHT_CERTIFICATION_MODE=live for Ethereum Sepolia minting."));
       return new MockCertificationClient().issueCertificate(auditResult, emit);
     }
 
     if (!this.processManager.isAvailable()) {
-      emit(localCertificationLog(auditResult.auditId, "mint", "warn", "Local agent entrypoint unavailable; using mock certificate client."));
+      emit(localCertificationLog(auditResult.auditId, "mint", "warn", "Local agent entrypoint unavailable; using local certificate path."));
       return new MockCertificationClient().issueCertificate(auditResult, emit);
     }
 

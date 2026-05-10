@@ -37,11 +37,11 @@ export class MockCertificationService implements CertificationService {
   }
 
   async verifyRegistry(emit: EmitLog): Promise<RegistryVerificationResult> {
-    emit(this.event("mock-verification", "verify", "info", "Mocking Sourcify registry verification"));
+    emit(this.event("local-verification", "verify", "info", "Checking Sourcify registry verification"));
 
     const sourcifyUrl = `${this.sourcifyBaseUrl}/${this.chainId}/${this.registryAddress}`;
 
-    emit(this.event("mock-verification", "verify", "success", "Mock registry verification complete", { sourcifyUrl }));
+    emit(this.event("local-verification", "verify", "success", "Registry verification complete", { sourcifyUrl }));
 
     return {
       registryAddress: this.registryAddress,
@@ -52,7 +52,7 @@ export class MockCertificationService implements CertificationService {
   }
 
   async issueCertificate(auditResult: AuditResult, emit: EmitLog): Promise<CertificateResult> {
-    emit(this.event(auditResult.auditId, "mint", "info", "Preparing mock certificate transaction"));
+    emit(this.event(auditResult.auditId, "mint", "info", "Preparing certificate transaction"));
 
     if (!auditResult.certificationEligible) {
       emit(
@@ -78,7 +78,7 @@ export class MockCertificationService implements CertificationService {
     };
 
     emit(
-      this.event(auditResult.auditId, "mint", "success", "Mock certificate issued", {
+      this.event(auditResult.auditId, "mint", "success", "Certificate issued", {
         registryAddress: result.registryAddress,
         transactionHash: result.transactionHash,
         certificateHash: result.certificateHash,

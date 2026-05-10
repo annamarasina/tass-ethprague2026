@@ -112,6 +112,17 @@ export class ApifyX402LegalProvider {
       providerMode: this.providerMode,
       dryRun: this.mcpDryRun,
     }));
+    emit?.(event(input.auditId, "compliance_payment", x402Payment.mocked ? "warn" : "success", "Apify compliance payment path prepared", {
+      network: process.env.X402_NETWORK ?? "sepolia",
+      asset: process.env.X402_ASSET ?? "USDC",
+      paymentTxHash: x402PaymentTxHash,
+      mode: x402Payment.mode,
+      mocked: x402Payment.mocked,
+      providerMode: this.providerMode,
+      dryRun: this.mcpDryRun,
+      actorId: this.actorId,
+      mcpSession: this.providerMode === "mcp-x402" ? this.mcpSession : undefined,
+    }));
 
     if (this.providerMode === "token" && !this.apifyToken) {
       return this.fallback(input.auditId, x402PaymentTxHash, "APIFY_TOKEN is not configured", emit);
@@ -260,7 +271,7 @@ export class ApifyX402LegalProvider {
     return {
       source: "fallback",
       records: fallback.records,
-      apifyRunId: `mock-apify-${auditId}`,
+      apifyRunId: `apify-fallback-${auditId}`,
       x402PaymentTxHash,
       warning,
       fallbackSource: fallback.source,
@@ -285,7 +296,7 @@ export class ApifyX402LegalProvider {
     }
 
     if (this.x402Mode === "enforced") {
-      throw new Error("X402_MODE=enforced requires a real x402 settlement hash; set X402_PAYMENT_TX_HASH or switch to X402_MODE=mock for local demos.");
+      throw new Error("X402_MODE=enforced requires a real x402 settlement hash; set X402_PAYMENT_TX_HASH or use local authorization for demos.");
     }
 
     return {

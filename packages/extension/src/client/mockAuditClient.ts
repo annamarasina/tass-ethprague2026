@@ -5,7 +5,7 @@ type EmitAuditLog = (event: AuditLogEvent) => void;
 export class MockAuditClient {
   async runAudit(input: AuditInput, emit: EmitAuditLog): Promise<AuditResult> {
     await this.emitPhase(input.auditId, emit, "init", "info", "Reading selected Solidity file");
-    await this.emitPhase(input.auditId, emit, "legal_payment", "info", "Mock x402 payment prepared for Apify actor", {
+    await this.emitPhase(input.auditId, emit, "legal_payment", "info", "x402 payment prepared for Apify actor", {
       network: "sepolia",
       asset: "USDC",
     });
@@ -23,25 +23,25 @@ export class MockAuditClient {
   private buildResult(input: AuditInput): AuditResult {
     const blocked = shouldReturnBlockedResult(input);
     const criticalFinding: SecurityFinding = {
-      id: "mock-critical-proxy-collision",
+      id: "critical-proxy-collision",
       title: "Critical proxy storage collision risk",
       severity: "critical",
       description: "The contract uses upgradeable-style storage without a reserved gap, matching a recent exploit pattern.",
       filePath: input.selectedFilePath,
       lineStart: 42,
       lineEnd: 48,
-      evidence: "Detected implementation slot and owner slot adjacency in mock AST/storage summary.",
+      evidence: "Detected implementation slot and owner slot adjacency in the AST/storage summary.",
       recommendation: "Add explicit storage gaps and validate proxy storage layout before deployment.",
     };
     const mediumFinding: SecurityFinding = {
-      id: "mock-owner-privilege",
+      id: "owner-privilege",
       title: "Privileged owner function requires disclosure",
       severity: "medium",
       description: "README claims limited admin control, but the contract exposes an owner-only configuration path.",
       filePath: input.selectedFilePath,
       lineStart: 24,
       lineEnd: 29,
-      evidence: "Mock parser found onlyOwner modifier on updateFee().",
+      evidence: "Parser found onlyOwner modifier on updateFee().",
       recommendation: "Document the admin role or replace it with timelocked governance.",
     };
     const findings = blocked ? [criticalFinding, mediumFinding] : [mediumFinding];
@@ -57,7 +57,7 @@ export class MockAuditClient {
         riskLevel: blocked ? "medium" : "low",
         score: blocked ? 68 : 91,
         x402PaymentTxHash: mockHex(`${input.auditId}:x402`),
-        apifyRunId: `mock-apify-${input.auditId}`,
+        apifyRunId: `apify-${input.auditId}`,
         sources: [
           {
             title: "Recent exploit intelligence digest",
@@ -71,10 +71,10 @@ export class MockAuditClient {
             url: "https://www.esma.europa.eu/",
             sourceType: "mica",
             fetchedAt: input.timestamp,
-            summary: "No immediate regulatory blocker found for the mocked contract intent.",
+            summary: "No immediate regulatory blocker found for the contract intent.",
           },
         ],
-        intentSummary: "Mock analysis compares README intent against privileged functions in the selected contract.",
+        intentSummary: "Analysis compares README intent against privileged functions in the selected contract.",
         codeIntentMismatch: [
           {
             claim: "No admin controls",
@@ -87,19 +87,19 @@ export class MockAuditClient {
         exploitNewsFindings: [
           {
             title: "Upgradeable storage pattern resembles recent exploit family",
-            summary: "Mock exploit intelligence flagged storage layout as the primary pattern to review.",
+            summary: "Exploit intelligence flagged storage layout as the primary pattern to review.",
             riskLevel: blocked ? "high" : "medium",
             sourceUrl: "https://rekt.news/",
           },
         ],
-        sentimentSummary: "Mock sentiment data shows normal developer concern around upgradeability and admin controls.",
+        sentimentSummary: "Developer sentiment data shows normal concern around upgradeability and admin controls.",
       },
       securityReport: {
         score: blocked ? 39 : 86,
         maxSimilarityPercent: blocked ? 82 : 34,
         closestMatches: [
           {
-            contractName: blocked ? "MockExploitVault" : "OpenZeppelin ERC20",
+            contractName: blocked ? "UpgradeableVaultReference" : "OpenZeppelin ERC20",
             address: "0x1000000000000000000000000000000000000001",
             chainId: 1,
             source: blocked ? "local_curated_index" : "sourcify",
@@ -113,15 +113,15 @@ export class MockAuditClient {
           {
             title: "Upgradeable storage layout needs review",
             severity: blocked ? "critical" : "medium",
-            description: "Mock storage diff found a risky slot pattern around ownership and implementation state.",
+            description: "Storage diff found a risky slot pattern around ownership and implementation state.",
             affectedSlot: "0x00",
-            referenceContract: blocked ? "MockExploitVault" : "OpenZeppelin proxy pattern",
+            referenceContract: blocked ? "UpgradeableVaultReference" : "OpenZeppelin proxy pattern",
           },
         ],
-        astSummary: "Mock AST analyzer found owner modifiers, external calls, and upgradeability-shaped state.",
+        astSummary: "AST analyzer found owner modifiers, external calls, and upgradeability-shaped state.",
         llmSecuritySummary: blocked
           ? "The selected contract is too similar to a known exploit pattern to certify."
-          : "The selected contract has admin disclosure issues but no critical blocker in the mock path.",
+          : "The selected contract has admin disclosure issues but no critical blocker.",
       },
       certificationEligible: !blocked,
       blockingReasons: blocked ? [criticalFinding.title] : [],

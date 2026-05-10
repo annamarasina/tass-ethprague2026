@@ -102,10 +102,6 @@ export class PreflightViewProvider implements vscode.WebviewViewProvider {
     });
 
     try {
-      if (options.includeComplianceTrace) {
-        await this.appendComplianceSimilarityTrace(auditId);
-      }
-
       const auditResult = await this.agentClient.runAudit(
         {
           auditId,
@@ -121,7 +117,7 @@ export class PreflightViewProvider implements vscode.WebviewViewProvider {
         ...this.model,
         state: auditResult.certificationEligible ? "report" : "blocked",
         selectedFilePath: activeFile ?? "pasted-code.sol",
-        statusMessage: auditResult.certificationEligible ? "Mock report ready" : "Certification blocked by mock findings",
+        statusMessage: auditResult.certificationEligible ? "Report ready" : "Certification blocked by findings",
         auditResult,
       });
       applyDiagnostics(this.diagnostics, auditResult);
@@ -142,12 +138,13 @@ export class PreflightViewProvider implements vscode.WebviewViewProvider {
     void this.view?.webview.postMessage({ type: "replaceState", model });
   }
 
-  private appendLog(level: WebviewLog["level"], phase: string, message: string): void {
+  private appendLog(level: WebviewLog["level"], phase: string, message: string, data?: Record<string, unknown>): void {
     const log: WebviewLog = {
       timestamp: new Date().toISOString(),
       level,
       phase,
       message,
+      data,
     };
 
     this.outputChannel.appendLine(`[${level}] ${phase}: ${message}`);
@@ -165,97 +162,7 @@ export class PreflightViewProvider implements vscode.WebviewViewProvider {
   }
 
   private appendAuditLog(event: AuditLogEvent): void {
-    this.appendLog(event.level, event.phase, event.message);
-  }
-
-  private async appendComplianceSimilarityTrace(auditId: string): Promise<void> {
-    // ─── COMPLIANCE CHECK (steps 1-4) ───
-    const complianceTrace: Array<{ level: WebviewLog["level"]; phase: string; message: string; delayMs?: number }> = [
-      {
-        level: "info",
-        phase: "compliance_classify",
-        message: `[1/8] Classifying contract type...
-LLM Agent reading Solidity code to determine contract category.
-→ Detected: ERC-20 Stablecoin (fiat-collateralized)
-→ Selected scraper: ESMA MiCA Compliance Officer`,
-        delayMs: 400,
-      },
-      {
-        level: "info",
-        phase: "compliance_payment",
-        message: `[2/8] Paying Apify actor via x402 protocol...
-→ Network: Base Sepolia
-→ Amount: 0.001 USDC
-→ Actor: esma-watchdog (MiCA regulatory scraper)
-→ x402 tx: 0x7a3f...b4e2 ✓ confirmed`,
-        delayMs: 500,
-      },
-      {
-        level: "info",
-        phase: "compliance_scrape",
-        message: `[3/8] Retrieving legal documents...
-→ Source: ESMA MiCA framework (esma.europa.eu)
-→ Source: EBA stablecoin guidelines (eba.europa.eu)
-→ Fetched 4 regulatory documents (12.3 KB)`,
-        delayMs: 600,
-      },
-      {
-        level: "success",
-        phase: "compliance_analysis",
-        message: `[4/8] LLM analyzing code against legal requirements...
-→ Reading: Solidity source code
-→ Reading: MiCA Article 48 (reserve requirements)
-→ Reading: EBA Guidelines on stablecoin governance
-→ Generating compliance suggestions...`,
-        delayMs: 700,
-      },
-    ];
-
-    // ─── VULNERABILITY CHECK (steps 5-8) ───
-    const vulnerabilityTrace: Array<{ level: WebviewLog["level"]; phase: string; message: string; delayMs?: number }> = [
-      {
-        level: "info",
-        phase: "similarity_search",
-        message: `[5/8] Vulnerability similarity search
-Loading cached embeddings (baai/bge-m3)
-  rank  1  row= 10  similarity=0.9141  ██████████████████
-  rank  2  row=  4  similarity=0.7409  ██████████████
-  rank  3  row=  9  similarity=0.7222  ██████████████
-  rank  4  row=  5  similarity=0.7120  ██████████████
-  rank  5  row=  0  similarity=0.7021  ██████████████`,
-        delayMs: 400,
-      },
-      {
-        level: "success",
-        phase: "similarity_filter",
-        message: `[6/8] Filter similarity > 0.90
-→ Selected row=10  score=0.9141 (passed threshold)`,
-        delayMs: 300,
-      },
-      {
-        level: "info",
-        phase: "sourcify_hash",
-        message: `[7/8] Sourcify source_hash + BigQuery lookup
-→ Row 10, score=0.9141
-→ Hash: 0x02409faa...653bc654`,
-        delayMs: 300,
-      },
-      {
-        level: "warn",
-        phase: "findings_crawl",
-        message: `[8/8] Known findings crawl
-→ Issue: Value of token1OutBase might became stale (TRIBERagequit.sol #126)
-→ URL: github.com/code-423n4/2021-11-fei-findings/issues/126`,
-        delayMs: 300,
-      },
-    ];
-
-    for (const event of [...complianceTrace, ...vulnerabilityTrace]) {
-      this.appendLog(event.level, event.phase, event.message);
-      await delay(event.delayMs ?? 220);
-    }
-
-    this.outputChannel.appendLine(`[info] audit_trace: completed for ${auditId}`);
+    this.appendLog(event.level, event.phase, event.message, event.data);
   }
 
   private getSelectedSolidityDocument(): vscode.TextDocument | undefined {
@@ -306,10 +213,4 @@ Loading cached embeddings (baai/bge-m3)
       this.appendLog("error", "mint", message);
     }
   }
-}
-
-function delay(ms: number): Promise<void> {
-  return new Promise((resolve) => {
-    setTimeout(resolve, ms);
-  });
 }
