@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto";
 import type { AuditInput, AuditLogEvent, AuditResult, EmitLog, Hex, SecurityReport } from "./interfaces";
+import { runPythonVulnerabilityAnalysis } from "./tools/security/pythonVulnerabilityAnalyzer";
 import { MockLegalAnalyzer } from "./tools/legal";
 
 const legalAnalyzer = new MockLegalAnalyzer();
@@ -10,7 +11,7 @@ export async function runAudit(input: AuditInput, emit: EmitLog): Promise<AuditR
   }));
 
   const legalReport = await legalAnalyzer.run(input, emit);
-  const securityReport = await runMockSecurityAnalysis(input, emit);
+  const securityReport = (await runPythonVulnerabilityAnalysis(input, emit)) ?? (await runMockSecurityAnalysis(input, emit));
   const blockingReasons = collectBlockingReasons(legalReport.codeIntentMismatch, securityReport);
   const totalScore = Math.round(legalReport.score * 0.38 + securityReport.score * 0.62);
   const reportSeed = JSON.stringify({

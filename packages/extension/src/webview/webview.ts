@@ -531,17 +531,36 @@ function renderComplianceTrace(log: WebviewModel["logs"][number]): HTMLElement |
 
   if (log.phase === "security_similarity") {
     const data = log.data ?? {};
-    return renderTraceKeyValueCard("2/4", "Security similarity review", [
+    const rows: Array<[string, string]> = [
       ["Status", log.message],
       ["Max similarity", stringValue(data.maxSimilarityPercent, "pending")],
       ["Findings", stringValue(data.findings, "pending")],
-    ]);
+      ["Rows above threshold", stringValue(data.rowsAboveThreshold, "pending")],
+    ];
+    for (const [index, match] of arrayValue(data.topMatches).slice(0, 3).entries()) {
+      if (!isRecord(match)) {
+        continue;
+      }
+      rows.push([`Match ${index + 1}`, `row ${stringValue(match.row, "?")} - ${stringValue(match.score, "?")}`]);
+    }
+    return renderTraceKeyValueCard("2/4", "Security similarity review", rows, log.level === "success" ? "success" : undefined);
   }
 
   if (log.phase === "security_storage") {
-    return renderTraceKeyValueCard("3/4", "Storage layout review", [
-      ["Status", log.message],
-    ], log.level === "warn" || log.level === "error" ? "warn" : undefined);
+    const data = log.data ?? {};
+    const rows: Array<[string, string]> = [["Status", log.message]];
+    for (const [index, lookup] of arrayValue(data.lookups).slice(0, 3).entries()) {
+      if (!isRecord(lookup)) {
+        continue;
+      }
+      rows.push([`Lookup ${index + 1}`, `row ${stringValue(lookup.row, "?")} - ${stringValue(lookup.sourceHash, "source hash unavailable")}`]);
+      const deployments = arrayValue(lookup.deployments);
+      const deployment = deployments.find(isRecord);
+      if (deployment) {
+        rows.push(["Deployment", `${stringValue(deployment.deployment_address, "unknown")} / chain ${stringValue(deployment.chain_id, "?")}`]);
+      }
+    }
+    return renderTraceKeyValueCard("3/4", "Sourcify source-hash lookup", rows, log.level === "warn" || log.level === "error" ? "warn" : "success");
   }
 
   if (log.phase === "security_analysis") {
