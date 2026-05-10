@@ -593,6 +593,22 @@
         box-shadow: 0 0 22px rgba(255, 139, 124, 0.38);
       }
 
+      .sourcify-points {
+        display: grid;
+        gap: 18px;
+        list-style: none;
+        margin: 34px auto 0;
+        max-width: 860px;
+        padding: 0;
+        text-align: center;
+      }
+
+      .sourcify-points li {
+        color: #dce3ff;
+        font-size: clamp(20px, 2vw, 28px);
+        line-height: 1.28;
+      }
+
       .apify-column li::before {
         background: var(--cyan);
         box-shadow: 0 0 22px rgba(125, 162, 255, 0.42);
@@ -1126,6 +1142,7 @@
       </section>
       -->
 
+      <!--
       <section class="slide">
         <img class="bounty-logo" src="assets/swarm-logo.png" alt="Swarm logo" />
         <div class="layout center-stack">
@@ -1157,6 +1174,7 @@
           </div>
         </div>
       </section>
+      -->
 
       <section class="slide">
         <div class="layout center-stack">
@@ -1164,14 +1182,10 @@
             <p class="kicker">Core Intelligence</p>
             <h2>Powered by Sourcify.</h2>
             <p class="lead">The data set that enables precise smart contract analysis.</p>
-        <div class="impact-grid" style="text-align: left; margin-top: 40px;">
-        <div class="stack">
-        <div class="body-copy">
-         <p>• Using it, we built a fully-functional smart contract similarity checker.</p>
-           <p>• Cross-reference those exact Sourcify matches with GitHub and Etherscan to find historical
-           vulnerabilities.</p>
-           </div>
-            </div>
+            <ul class="sourcify-points">
+              <li>Built a smart contract similarity checker using verified contracts.</li>
+              <li>Cross-referenced Sourcify matches with GitHub and Etherscan to find historical vulnerabilities.</li>
+            </ul>
           </div>
         </div>
       </section>
@@ -1186,7 +1200,7 @@
         <span></span>
         <div class="nav" aria-label="slide navigation">
           <button type="button" id="prev" aria-label="Previous slide">‹</button>
-          <span class="slide-no" id="slideNo">1 / 8</span>
+          <span class="slide-no" id="slideNo">1 / 7</span>
           <button type="button" id="next" aria-label="Next slide">›</button>
         </div>
       </div>
